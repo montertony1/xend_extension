@@ -17,7 +17,8 @@
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
     "stream-browserify": "^3.0.0",
-    "typescript": "^3.9.10"
+    "typescript": "^3.9.10",
+    "web3": "^4.1.2"
   },
   "scripts": {
     "start": "react-app-rewired start",

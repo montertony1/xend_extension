@@ -1,8 +1,3 @@
-import { MetaMaskInpageProvider, createExternalExtensionProvider } from "@metamask/providers";
-import { Contract, Provider, ethers } from "ethers";
-import logo from "./xend-small.png";
-import metamaskLogo from "./metamask.png";
-
 const logoW = chrome.runtime.getURL("/static/img/xend-small-white.png");
 const logoB = chrome.runtime.getURL("/static/img/xend-small-black.png");
 const avatarImg = chrome.runtime.getURL("/static/img/avatar.png");
@@ -21,11 +16,6 @@ let state = {
 const user = {
     pfp: 'https://pbs.twimg.com/profile_images/1606815745215791105/IX8pacjk_400x400.jpg'
 }
-
-interface IWeb3 {  
-    ethereum?: MetaMaskInpageProvider;
-    contract?: Contract;
-};
 
 interface User {
     uid: string | undefined;
@@ -101,6 +91,12 @@ function injectStyleList() {
 }
 
 function login() {
+    if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
+        document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
+        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
+        return;
+    }
+
     var port = chrome.runtime.connect({name: "twitterAuth"});
     port.postMessage({task: "startTwitterAuth"});
     port.onMessage.addListener(function(msg) {
