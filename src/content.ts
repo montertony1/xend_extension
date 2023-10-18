@@ -101,20 +101,23 @@ function injectStyleList() {
 }
 
 function login() {
-    state.authorized = true;
-    chrome.storage.local.set({
-        state: state
+    var port = chrome.runtime.connect({name: "twitterAuth"});
+    port.postMessage({task: "startTwitterAuth"});
+    port.onMessage.addListener(function(msg) {
+        if (msg.result === "successTwitterAuth") {
+            console.log("successTwitterAuth: ", msg.token, msg.secret);
+            state.authorized = true;
+            
+            chrome.storage.local.set({
+                state: state
+            });
+
+            if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
+                document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
+                document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
+            }
+        }
     });
-    if (state.authorized
-        && document.querySelector('aside[xend="wallet"]')
-        // @ts-ignore
-        && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none"
-    ) {
-        // @ts-ignore
-        document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
-    }
 }
 
 function getSeparatorColor() {

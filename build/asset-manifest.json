@@ -6,5 +6,6 @@
   "index.html": "/index.html",
   "index.css.map": "/static/css/index.css.map",
   "index.js.map": "/static/js/index.js.map",
+  "background.js.map": "/static/js/background.js.map",
   "content.js.map": "/static/js/content.js.map"
 }
