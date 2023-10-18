@@ -1,22 +1,84 @@
+import { MetaMaskInpageProvider, createExternalExtensionProvider } from "@metamask/providers";
+import { Contract, Provider, ethers } from "ethers";
+import logo from "./xend-small.png";
+import metamaskLogo from "./metamask.png";
+
 const logoW = chrome.runtime.getURL("/static/img/xend-small-white.png");
 const logoB = chrome.runtime.getURL("/static/img/xend-small-black.png");
 const avatarImg = chrome.runtime.getURL("/static/img/avatar.png");
 const styleList = chrome.runtime.getURL("/static/css/style.css");
 
 let state = {
+    loggedIn: false,
     authorized: false,
     walletConnected: false,
     user: {
-        uid: "",
-        handle: "",
-        pfp: "",
-        address: "",
         avatar: avatarImg,
         name: "@elonmusk"
     }
 };
 
-function getState(callback) {
+const user = {
+    pfp: 'https://pbs.twimg.com/profile_images/1606815745215791105/IX8pacjk_400x400.jpg'
+}
+
+interface IWeb3 {  
+    ethereum?: MetaMaskInpageProvider;
+    contract?: Contract;
+};
+
+interface User {
+    uid: string | undefined;
+    name: string | undefined;
+    handle: string | undefined;
+    pfp: string | undefined;
+    address: string | undefined;
+}
+
+const traverseAndFindAttribute = (node: any, tagName: string): any => {
+    let nodes = []
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName.toLowerCase() === tagName && node.getElementsByTagName('a').length > 0
+          && node.getAttribute('xend') !== 'send'
+          && node.getAttribute('xend') !== 'feed'
+          && node.getAttribute('xend') !== 'login'
+          && node.getAttribute('xend') !== 'wallet'
+          && node.getAttribute('xend') !== 'dashboard'
+          && node.getAttribute('xend') !== 'profile'
+      ) {
+        if (node.parentElement.parentElement.parentElement.children.length > 1) {
+            console.log('aside found');
+            console.log(node)
+            nodes.push(node)
+        }
+      }
+      const attribute = node.getAttribute('data-testid');
+      if (attribute === 'UserProfileSchema-test') {
+        const xendSend = document.querySelector('[xend="send"]')
+        if (xendSend) {
+            const author = JSON.parse(node.innerHTML).author;
+            const uid = author.identifier;
+            console.log('mutationobserver', uid);
+            xendSend.getElementsByTagName('span')[0].innerText = `@${author.additionalName}`;
+            xendSend.parentElement!.parentElement!.style.display = '';
+        }
+      } else {
+        const user = document.querySelector('[data-testid="UserProfileSchema-test"]') 
+        const xendSend = document.querySelector('[xend="send"]');
+        if (!user && xendSend) { 
+            xendSend.parentElement!.parentElement!.style.display = 'none';
+        }
+      }
+    }
+
+    for (const child of node.childNodes) {
+      nodes = nodes.concat(traverseAndFindAttribute(child, tagName))
+    }
+    return nodes;
+}
+
+
+function getState(callback: any) {
     chrome.storage.local.get(["state"], (opt) => {
         if (opt && opt.state) {
             state = opt.state;
@@ -31,48 +93,67 @@ function injectStyleList() {
     link.href = styleList;
     link.type = "text/css";
     link.rel = "stylesheet";
+    link.onload = () => {
+        console.log('load');
+        setThemeColors();
+    };
     document.getElementsByTagName("head")[0].appendChild(link);
 }
 
-async function login() {
-    var port = chrome.runtime.connect({name: "twitterAuth"});
-    port.postMessage({task: "startTwitterAuth"});
-    port.onMessage.addListener(function(msg) {
-        if (msg.result === "successTwitterAuth") {
-            console.log("successTwitterAuth: ", msg.token, msg.secret);
-            state.authorized = true;
-            
-            chrome.storage.local.set({
-                state: state
-            });
-
-            if (state.authorized
-                && document.querySelector('aside[xend="wallet"]')
-                && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none"
-            ) {
-                document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
-                document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
-            }
-        }
+function login() {
+    state.authorized = true;
+    chrome.storage.local.set({
+        state: state
     });
+    if (state.authorized
+        && document.querySelector('aside[xend="wallet"]')
+        // @ts-ignore
+        && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none"
+    ) {
+        // @ts-ignore
+        document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
+    }
+}
 
-    // chrome.runtime.sendMessage({type: "login"}).then((res) => {
-    //     console.log("Auth Result", res);
-    //     console.log(performance.now());
-    //     // state.authorized = true/false;
-    //     state.authorized = res;
-    
-    //     chrome.storage.local.set({
-    //         state: state
-    //     });
-    //     if (state.authorized
-    //         && document.querySelector('aside[xend="wallet"]')
-    //         && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none"
-    //     ) {
-    //         document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
-    //         document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
-    //     }
-    // });
+function getSeparatorColor() {
+    const primaryColumn = document.querySelector('div[data-testid="primaryColumn"]');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(primaryColumn);
+    return compStyles.borderColor;
+}
+
+function getMainColor() {
+    const inp = document.querySelector('form[aria-label="Search"] input');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(inp);
+    return compStyles.color;
+}
+
+function getSecondColor() {
+    const searchIcon = document.querySelector('form[aria-label="Search"] svg');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(searchIcon);
+    return compStyles.color;
+}
+
+function getLinkColor() {
+    const link = document.querySelector('a');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(link);
+    return compStyles.color;
+}
+
+function setThemeColors() {
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendhorline', getSeparatorColor());
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendsecondcolor', getSecondColor());
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendmaincolor', getMainColor());
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendlinkcolor', getLinkColor());
 }
 
 function connectWallet() {
@@ -82,9 +163,12 @@ function connectWallet() {
     });
     if (state.authorized && state.walletConnected
         && document.querySelector('aside[xend="dashboard"]')
+        // @ts-ignore
         && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
     ) {
+        // @ts-ignore
         document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
         document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
     }
 }
@@ -98,17 +182,22 @@ function logout() {
     if (!state.authorized && !state.walletConnected
         && document.querySelector('aside[xend="dashboard"]')
         && document.querySelector('aside[xend="profile"]')
+        // @ts-ignore
         && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == ""
     ) {
+        // @ts-ignore
         document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
         document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
         document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "";
     }
 }
 
-function createLogin(node) {
+function createLogin(node: any) {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
+    // @ts-ignore
     const compStyles = window.getComputedStyle(para);
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
@@ -133,6 +222,7 @@ function createLogin(node) {
         logo = logoW
     } else {
         container.classList.add("xend-ext-white");
+        // @ts-ignore
         document.querySelector(':root').style.setProperty('--xendwhite', '#333333');
         logo = logoB
     }
@@ -147,14 +237,16 @@ function createLogin(node) {
     aside.replaceChildren(aside.children[0]);
     aside.getElementsByTagName('div')[0].appendChild(container);
 
+    // @ts-ignore
     container.querySelector("#xend-ext-logo-btn").addEventListener("click", e => {
         login();
     });
 }
 
-function createWalletConnect(node) {
+function createWalletConnect(node: any) {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
+    // @ts-ignore
     const compStyles = window.getComputedStyle(para);
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
@@ -176,6 +268,7 @@ function createWalletConnect(node) {
         container.classList.add("xend-ext-dark");
     } else {
         container.classList.add("xend-ext-white");
+        // @ts-ignore
         document.querySelector(':root').style.setProperty('--xendwhite', '#333333');
     }
 
@@ -190,14 +283,16 @@ function createWalletConnect(node) {
     aside.replaceChildren(aside.children[0]);
     aside.getElementsByTagName('div')[0].appendChild(container);
 
+    // @ts-ignore
     container.querySelector("#xend-ext-wallet-connect-btn").addEventListener("click", e => {
         connectWallet();
     });
 }
 
-function createDashboard(node) {
+function createDashboard(node: any) {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
+    // @ts-ignore
     const compStyles = window.getComputedStyle(para);
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
@@ -219,6 +314,7 @@ function createDashboard(node) {
         container.classList.add("xend-ext-dark");
     } else {
         container.classList.add("xend-ext-white");
+        // @ts-ignore
         document.querySelector(':root').style.setProperty('--xendwhite', '#333333');
     }
 
@@ -367,7 +463,7 @@ function createDashboard(node) {
   </div>
 
   <div class="tabs__links">
-    <a href="#content-1">Home</a>
+    <a href="#content-1">Feed</a>
     <a href="#content-2">Keys</a>
     <a href="#content-3">Profile</a>
    
@@ -380,34 +476,48 @@ function createDashboard(node) {
     aside.replaceChildren(aside.children[0]);
     aside.getElementsByTagName('div')[0].appendChild(container);
 
+    // @ts-ignore
     container.querySelector('a[href="#content-1"]').addEventListener("click", (e) => {
         e.preventDefault();
+        // @ts-ignore
         container.querySelector('#content-1').classList.add("selected");
+        // @ts-ignore
         container.querySelector('#content-2').classList.remove("selected");
+        // @ts-ignore
         container.querySelector('#content-3').classList.remove("selected");
     });
+    // @ts-ignore
     container.querySelector('a[href="#content-2"]').addEventListener("click", (e) => {
         e.preventDefault();
+        // @ts-ignore
         container.querySelector('#content-2').classList.add("selected");
+        // @ts-ignore
         container.querySelector('#content-1').classList.remove("selected");
+        // @ts-ignore
         container.querySelector('#content-3').classList.remove("selected");
     });
+    // @ts-ignore
     container.querySelector('a[href="#content-3"]').addEventListener("click", (e) => {
         e.preventDefault();
+        // @ts-ignore
         container.querySelector('#content-3').classList.add("selected");
+        // @ts-ignore
         container.querySelector('#content-1').classList.remove("selected");
+        // @ts-ignore
         container.querySelector('#content-2').classList.remove("selected");
 
     });
 
+    // @ts-ignore
     container.querySelector("#xend-ext-dashboard-settings-btn").addEventListener("click", e => {
         logout();
     });
 }
 
-const createProfileMenu = (node) => {
+const createProfileMenu = (node: any) => {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
+    // @ts-ignore
     const compStyles = window.getComputedStyle(para);
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
@@ -429,6 +539,7 @@ const createProfileMenu = (node) => {
         container.classList.add("xend-ext-dark");
     } else {
         container.classList.add("xend-ext-white");
+        // @ts-ignore
         document.querySelector(':root').style.setProperty('--xendwhite', '#333333');
     }
 
@@ -494,65 +605,19 @@ const createProfileMenu = (node) => {
 
 };
 
-const traverseAndFindAttribute = (node, tagName) => {
-    let nodes = []
-    if (node.nodeType === Node.ELEMENT_NODE) {
-        if (node.tagName.toLowerCase() === tagName && node.getElementsByTagName('a').length > 0
-            && node.getAttribute('xend') !== 'send'
-            && node.getAttribute('xend') !== 'feed'
-            && node.getAttribute('xend') !== 'login'
-            && node.getAttribute('xend') !== 'wallet'
-            && node.getAttribute('xend') !== 'dashboard'
-            && node.getAttribute('xend') !== 'profile'
-        ) {
-            if (node.parentElement.parentElement.parentElement.children.length > 1) {
-                console.log('aside found');
-                console.log(node)
-                nodes.push(node)
-            }
-        }
-        const attribute = node.getAttribute('data-testid');
-        if (attribute === 'UserProfileSchema-test') {
-            const xendSend = document.querySelector('[xend="send"]')
-            if (xendSend) {
-                const author = JSON.parse(node.innerHTML).author;
-                const uid = author.identifier;
-                console.log('mutationobserver', uid);
-                xendSend.getElementsByTagName('span')[0].innerText = `@${author.additionalName}`;
-                //xendSend.parentElement!.parentElement!.style.display = '';
-                try {
-                    xendSend.parentElement.parentElement.style.display = '';
-                } catch (e) {}
-            }
-        } else {
-            const user = document.querySelector('[data-testid="UserProfileSchema-test"]')
-            const xendSend = document.querySelector('[xend="send"]');
-            if (!user && xendSend) {
-                //xendSend.parentElement!.parentElement!.style.display = 'none';
-                try {
-                xendSend.parentElement.parentElement.style.display = 'none';
-                } catch (e) {}
-            }
-        }
-    }
 
-    for (const child of node.childNodes) {
-        nodes = nodes.concat(traverseAndFindAttribute(child, tagName))
-    }
-    return nodes;
-}
-
-const onMutation = async (mutations) => {
+const onMutation = async (mutations: MutationRecord[]) => {
     for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
             const nodes = traverseAndFindAttribute(node, 'aside');
-            nodes.forEach((n) => {
+            nodes.forEach((n: any) => {
                 const sidebar = n.parentElement.parentElement.parentElement;
 
                 getState(() => {
                     if (!document.getElementById("xendExtStyleList")) {
                         injectStyleList();
                     }
+
 
                     // Login
                     const loginMenu = n.parentElement.parentElement.cloneNode(true);
@@ -573,6 +638,12 @@ const onMutation = async (mutations) => {
                     const profileMenu = n.parentElement.parentElement.cloneNode(true);
                     createProfileMenu(profileMenu);
                     sidebar.insertBefore(profileMenu, sidebar.children[2]);
+
+                    // Settings
+                    //const settingsMenu = n.parentElement.parentElement.cloneNode(true);
+                    //createSettings(settingsMenu);
+                    //sidebar.insertBefore(settingsMenu, sidebar.children[2]);
+
                 });
 
 
@@ -592,16 +663,23 @@ observe();
 
 // Test profile page
 setInterval(() => {
+    // @ts-ignore
     if (state.authorized && state.walletConnected
         && document.querySelector('a[href="/settings/profile"]')
         && document.querySelector('aside[xend="profile"]')
+        // @ts-ignore
         && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == "none"
     ) {
+        // @ts-ignore
         document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
-    } else if (!document.querySelector('a[href="/settings/profile"]')
-        && document.querySelector('aside[xend="profile"]')
-        && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == ""
-    ) {
-        document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+    } else { // @ts-ignore
+        if (!document.querySelector('a[href="/settings/profile"]')
+                && document.querySelector('aside[xend="profile"]')
+            // @ts-ignore
+                && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == ""
+            ) {
+                // @ts-ignore
+            document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+            }
     }
 }, 750);

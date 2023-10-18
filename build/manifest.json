@@ -1,7 +1,7 @@
 {
   "name": "XEND",
   "description": "Create. Explore. Participate and Profit.",
-  "version": "1.1",
+  "version": "1.0",
   "manifest_version": 3,
   "action": {
       "default_popup": "index.html",
@@ -20,11 +20,7 @@
   "permissions": [
     "identity",
     "storage",
-    "declarativeNetRequest",
-    "activeTab",
-    "runtime",
-    "tabs",
-    "https://api.twitter.com/*"
+    "declarativeNetRequest"
   ],
   "content_scripts": [{
     "js": [ 
@@ -40,6 +36,8 @@
         "static/img/login-btn.png",
         "static/img/wallet-connect-btn.png",
         "static/img/settings-btn.png",
+        "static/img/settings-close-btn.png",
+        "static/img/copy-btn.png",
         "static/img/avatar.png",
         "static/img/xend-small-white.png",
         "static/img/xend-small-black.png",

@@ -1,0 +1,59 @@
+{
+  "name": "XEND",
+  "description": "Create. Explore. Participate and Profit.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+      "default_popup": "index.html",
+      "default_title": "Open the Extension"
+  },
+  "icons": {
+      "16": "logo16.png",
+      "32": "logo32.png",
+      "48": "logo48.png",
+      "128": "logo128.png",
+      "192": "logo192.png"
+  },
+  "background": {
+    "service_worker": "static/js/background.js"
+  },
+  "permissions": [
+    "identity",
+    "storage",
+    "declarativeNetRequest"
+  ],
+  "content_scripts": [{
+    "js": [ 
+      "static/js/content.js"
+    ],
+    "matches": [ 
+      "<all_urls>"
+    ]
+ }],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "static/img/login-btn.png",
+        "static/img/wallet-connect-btn.png",
+        "static/img/settings-btn.png",
+        "static/img/settings-close-btn.png",
+        "static/img/copy-btn.png",
+        "static/img/avatar.png",
+        "static/img/xend-small-white.png",
+        "static/img/xend-small-black.png",
+        "static/img/currency.png",
+        "static/img/file-upload-btn.png",
+        "static/img/up-trend.png",
+        "static/img/home-white.png",
+        "static/img/home-blue.png",
+        "static/img/key-white.png",
+        "static/img/key-blue.png",
+        "static/img/user-white.png",
+        "static/img/user-blue.png",
+        "logo128.png",
+        "static/css/style.css"
+      ],
+      "matches": [ "https://twitter.com/*" ]
+    }
+  ]
+}

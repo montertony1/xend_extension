@@ -1,5 +1,10 @@
 :root {
+    --xendmaincolor: #ffffff;
     --xendwhite: #ffffff;
+    --xendbuttonwhite: #ffffff;
+    --xendhorline: #2d2d2d;
+    --xendsecondcolor: #2d2d2d;
+    --xendbuttonbg: #393939;
 }
 .xend-ext-dark {
 
@@ -17,6 +22,10 @@
 }
 .xend-ext-container * {
     font-family: TwitterChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.xend-ext-container button:hover {
+    cursor: pointer;
+    box-shadow: 0 0 0 20px #00000020 inset;
 }
 .xend-ext-logo-img {
     width: 150px;
@@ -332,6 +341,89 @@ div#xend-ext-menu-value div {
     background: url(/static/img/up-trend.png) 0px 3px no-repeat;
     background-size: 14px;
 }
+.xend-ext-settings-header {
+    width: 100%;
+}
+.xend-ext-settings-top {
+    display: inline-block;
+    line-height: 32px;
+    padding: 0 14px 0 8px;
+    height: 33px;
+    border: none;
+    border-radius: 11px;
+    background: #104155;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--xendbuttonwhite);
+}
+.xend-ext-settings-top button {
+    width: 22px;
+    height: 22px;
+    margin-top: -2px;
+    margin-right: 7px;
+    border: none;
+    border-radius: 11px;
+    background: url(/static/img/settings-close-btn.png) center no-repeat;
+    background-size: cover;
+    vertical-align: middle;
+    cursor: pointer;
+}
+.xend-ext-settings-subtitle {
+    position: relative;
+    margin-top: 10px;
+    padding-bottom: 10px;
+}
+.xend-ext-settings-subtitle:after {
+    content: '';
+    position: absolute;
+    background: var(--xendhorline);
+    height: 1px;
+    left: -16px;
+    right: -16px;
+    bottom: 0;
+}
+.xend-ext-settings-logo {
+     width: 50px;
+     height: 50px;
+     border-radius: 25px;
+     vertical-align: top;
+     margin-right: 7px;
+ }
+.xend-ext-settings-user {
+    display: inline-block;
+    max-width: 150px;
+    font-size: 19px;
+    font-weight: bold;
+    margin-top: 4px;
+    color: var(--xendmaincolor);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.xend-ext-settings-user div {
+    display: inline-block;
+    padding-right: 14px;
+    color: var(--xendsecondcolor);
+    /*background: url(/static/img/copy-btn.png) right 2px no-repeat;*/
+    background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGhlaWdodD0iMWVtIiB2aWV3Qm94PSIwIDAgNDQ4IDUxMiI+PHBhdGggZD0iTTM4NCAzMzZIMTkyYy04LjggMC0xNi03LjItMTYtMTZWNjRjMC04LjggNy4yLTE2IDE2LTE2bDE0MC4xIDBMNDAwIDExNS45VjMyMGMwIDguOC03LjIgMTYtMTYgMTZ6TTE5MiAzODRIMzg0YzM1LjMgMCA2NC0yOC43IDY0LTY0VjExNS45YzAtMTIuNy01LjEtMjQuOS0xNC4xLTMzLjlMMzY2LjEgMTQuMWMtOS05LTIxLjItMTQuMS0zMy45LTE0LjFIMTkyYy0zNS4zIDAtNjQgMjguNy02NCA2NFYzMjBjMCAzNS4zIDI4LjcgNjQgNjQgNjR6TTY0IDEyOGMtMzUuMyAwLTY0IDI4LjctNjQgNjRWNDQ4YzAgMzUuMyAyOC43IDY0IDY0IDY0SDI1NmMzNS4zIDAgNjQtMjguNyA2NC02NFY0MTZIMjcydjMyYzAgOC44LTcuMiAxNi0xNiAxNkg2NGMtOC44IDAtMTYtNy4yLTE2LTE2VjE5MmMwLTguOCA3LjItMTYgMTYtMTZIOTZWMTI4SDY0eiIvPjwvc3ZnPgo=) right 2px no-repeat;
+    background-size: 10px 12px;
+    font-size: 15px;
+    font-weight: normal;
+    cursor: pointer;
+}
+button#xend-ext-logout {
+    float: right;
+    margin-top: 12px;
+    border: none;
+    border-radius: 11px;
+    color: var(--xendbuttonwhite);
+    background: var(--xendbuttonbg);
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 6px 14px;}
+
+
+
 
 .tabs {
     width: 100%;

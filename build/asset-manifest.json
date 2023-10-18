@@ -1,0 +1,10 @@
+{
+  "index.css": "/static/css/index.css",
+  "index.js": "/static/js/index.js",
+  "background.js": "/static/js/background.js",
+  "content.js": "/static/js/content.js",
+  "index.html": "/index.html",
+  "index.css.map": "/static/css/index.css.map",
+  "index.js.map": "/static/js/index.js.map",
+  "content.js.map": "/static/js/content.js.map"
+}
