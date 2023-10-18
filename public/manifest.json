@@ -20,7 +20,11 @@
   "permissions": [
     "identity",
     "storage",
-    "declarativeNetRequest"
+    "declarativeNetRequest",
+    "activeTab",
+    "runtime",
+    "tabs",
+    "https://api.twitter.com/*"
   ],
   "content_scripts": [{
     "js": [ 
