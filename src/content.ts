@@ -1,3 +1,11 @@
+import { AnyNaptrRecord } from 'dns';
+import createMetaMaskProvider from 'metamask-extension-provider';
+import Web3 from 'web3';
+import { MetaMaskInpageProvider } from '@metamask/inpage-provider';
+import PortDuplexStream from 'extension-port-stream';
+import { detect } from 'detect-browser';
+const browser = detect();
+
 const logoW = chrome.runtime.getURL("/static/img/xend-small-white.png");
 const logoB = chrome.runtime.getURL("/static/img/xend-small-black.png");
 const avatarImg = chrome.runtime.getURL("/static/img/avatar.png");
@@ -12,6 +20,87 @@ let state = {
         name: "@elonmusk"
     }
 };
+
+//////////////////////////////////////////////////////////////////////////////
+const getNormalizeAddress = (accounts: any) => {
+    return accounts[0] ? accounts[0].toLowerCase() : null
+}
+
+const config = {
+    "CHROME_ID": "nkbihfbeogaeaoehlefnkodbefgpgknn",
+    "FIREFOX_ID": "webextension@metamask.io"
+}
+
+function getMetaMaskId () {
+    switch (browser && browser.name) {
+      case 'chrome':
+        return config.CHROME_ID
+      case 'firefox':
+        return config.FIREFOX_ID
+      default:
+        return config.CHROME_ID
+    }
+}
+
+const getInPageProvider = () => {
+    let provider
+  try {
+    let currentMetaMaskId = getMetaMaskId();
+    const metamaskPort = chrome.runtime.connect(currentMetaMaskId);
+    console.log("PortDuplexStream", PortDuplexStream);
+    const pluginStream = new PortDuplexStream(metamaskPort);
+    provider = new MetaMaskInpageProvider(pluginStream);
+ } catch (e) {
+    console.dir(`Metamask connect error `, e)
+    throw e
+  }
+  return provider
+}
+
+const getProvider = () => {
+    console.log("getProvider", window.ethereum);
+    
+    if (window.ethereum) {
+        console.log('found window.ethereum>>');
+        return window.ethereum;
+    } else {
+        console.log("getInPageProvider");
+        const provider = getInPageProvider();
+        return provider;
+    }
+}
+
+const getAccounts = async (provider: AnyNaptrRecord) => {
+    console.log("getAccounts");
+
+    if (provider) {
+        const [accounts, chainId] = await Promise.all([
+            provider.request({
+                method: 'eth_requestAccounts',
+            }),
+            provider.request({ method: 'eth_chainId' }),
+        ]);
+        return [accounts, chainId];
+    }
+    return false;
+}
+
+const connectWalletFunc = async () => {
+    console.log("connectWallet runs....")
+    try {
+        const provider = getProvider();
+        const [accounts, chainId] = await getAccounts(provider);
+        if (accounts && chainId) {
+            const account = getNormalizeAddress(accounts);
+            const web3 = new Web3(provider);
+            return true;
+        }
+    } catch (e) {
+        console.log("error while connect", e);
+    }
+    return false;
+}
+//////////////////////////////////////////////////////////////////////////////
 
 const user = {
     pfp: 'https://pbs.twimg.com/profile_images/1606815745215791105/IX8pacjk_400x400.jpg'
@@ -155,8 +244,20 @@ function setThemeColors() {
     document.querySelector(':root').style.setProperty('--xendlinkcolor', getLinkColor());
 }
 
-function connectWallet() {
-    state.walletConnected = true;
+async function connectWallet() {
+    if (state.authorized && state.walletConnected
+        && document.querySelector('aside[xend="dashboard"]')
+        // @ts-ignore
+        && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
+    ) {
+        // @ts-ignore
+        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+        return;
+    }
+
+    state.walletConnected = await connectWalletFunc();
     chrome.storage.local.set({
         state: state
     });
