@@ -1,7 +1,7 @@
 {
   "name": "XEND",
   "description": "Create. Explore. Participate and Profit.",
-  "version": "1.0",
+  "version": "1.0.1",
   "manifest_version": 3,
   "action": {
       "default_popup": "index.html",
@@ -54,6 +54,10 @@
         "static/img/key-blue.png",
         "static/img/user-white.png",
         "static/img/user-blue.png",
+        "static/img/lock.png",
+        "static/img/chain.png",
+        "static/img/trash.png",
+        "static/img/chevron.png",
         "logo128.png",
         "static/css/style.css"
       ],

@@ -27,7 +27,31 @@ chrome.runtime.onConnect.addListener(function(port) {
                     console.log("Access_Token", access_token);
                     console.log(performance.now());
                     if (access_token.token) {
-                        port.postMessage({result: "successTwitterAuth", token: access_token.token, secret: access_token.secret});
+                        try {
+                            const params = { token: access_token.token, secret: access_token.secret };
+                            const res = await (await fetch(`https://burntracker.io/backend/user/get_user_profile`, {
+                                method: 'POST',
+                                body: JSON.stringify(params),
+                                headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+                            })).json();
+
+                            console.log("profile: ", res);
+                            if (res.uid) {
+                                port.postMessage({
+                                    result: "successTwitterAuth", 
+                                    token: access_token.token, 
+                                    secret: access_token.secret,
+                                    handle: res.handle,
+                                    address: res.address,
+                                    pfp: res.pfp,
+                                    uid: res.uid
+                                });
+                            } else {
+                                console.log("error");
+                            }
+                        } catch(error) {
+                            console.log("error");
+                        }
                     } else {
                         console.log("error");
                     }

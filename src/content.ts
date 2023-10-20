@@ -15,7 +15,11 @@ let state = {
     loggedIn: false,
     authorized: false,
     walletConnected: false,
+    access_token: "",
+    access_secret: "",
     user: {
+        address: "",
+        uid: "",
         avatar: avatarImg,
         name: "@elonmusk"
     }
@@ -93,25 +97,29 @@ const connectWalletFunc = async () => {
         if (accounts && chainId) {
             const account = getNormalizeAddress(accounts);
             const web3 = new Web3(provider);
-            return true;
+            return {
+                result: true,
+                address: account
+            };
         }
     } catch (e) {
         console.log("error while connect", e);
     }
-    return false;
+    return {
+        result: false
+    };
+}
+
+const getShortHash = (hash: string) => {
+    if (hash.length < 20) {
+        return hash;
+    }
+    return hash.slice(0, 6) + " ... " + hash.slice(hash.length - 4, hash.length);
 }
 //////////////////////////////////////////////////////////////////////////////
 
 const user = {
     pfp: 'https://pbs.twimg.com/profile_images/1606815745215791105/IX8pacjk_400x400.jpg'
-}
-
-interface User {
-    uid: string | undefined;
-    name: string | undefined;
-    handle: string | undefined;
-    pfp: string | undefined;
-    address: string | undefined;
 }
 
 const traverseAndFindAttribute = (node: any, tagName: string): any => {
@@ -124,6 +132,7 @@ const traverseAndFindAttribute = (node: any, tagName: string): any => {
           && node.getAttribute('xend') !== 'wallet'
           && node.getAttribute('xend') !== 'dashboard'
           && node.getAttribute('xend') !== 'profile'
+          && node.getAttribute('xend') !== 'settings'
       ) {
         if (node.parentElement.parentElement.parentElement.children.length > 1) {
             console.log('aside found');
@@ -190,9 +199,16 @@ function login() {
     port.postMessage({task: "startTwitterAuth"});
     port.onMessage.addListener(function(msg) {
         if (msg.result === "successTwitterAuth") {
-            console.log("successTwitterAuth: ", msg.token, msg.secret);
             state.authorized = true;
+            state.access_token = msg.token;
+            state.access_secret = msg.secret;
+            state.user.address = msg.address;
+            state.user.uid = msg.uid;
+            state.user.avatar = msg.pfp;
+            state.user.name = msg.handle;
             
+            console.log("login: ", state);
+
             chrome.storage.local.set({
                 state: state
             });
@@ -257,7 +273,14 @@ async function connectWallet() {
         return;
     }
 
-    state.walletConnected = await connectWalletFunc();
+    const res = await connectWalletFunc();
+    if (!res.result) {
+        return;
+    }
+
+    state.walletConnected = res.result;
+    state.user.address = res.address;
+
     chrome.storage.local.set({
         state: state
     });
@@ -282,9 +305,14 @@ function logout() {
     if (!state.authorized && !state.walletConnected
         && document.querySelector('aside[xend="dashboard"]')
         && document.querySelector('aside[xend="profile"]')
+        && document.querySelector('aside[xend="settings"]')
         // @ts-ignore
-        && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == ""
+        && (document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == ""
+            // @ts-ignore
+            || document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display == "")
     ) {
+        // @ts-ignore
+        document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
         // @ts-ignore
         document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
         // @ts-ignore
@@ -316,6 +344,8 @@ function createLogin(node: any) {
 
     let logo;
     const container = document.createElement('div');
+    container.style.opacity = "0";
+    container.style.transition = "opacity .3s";
     container.classList.add("xend-ext-container");
     if (darkMode.matches || darkModeStyle) {
         container.classList.add("xend-ext-dark");
@@ -363,6 +393,8 @@ function createWalletConnect(node: any) {
     }
 
     const container = document.createElement('div');
+    container.style.opacity = "0";
+    container.style.transition = "opacity .3s";
     container.classList.add("xend-ext-container");
     if (darkMode.matches || darkModeStyle) {
         container.classList.add("xend-ext-dark");
@@ -409,6 +441,8 @@ function createDashboard(node: any) {
     }
 
     const container = document.createElement('div');
+    container.style.opacity = "0";
+    container.style.transition = "opacity .3s";
     container.classList.add("xend-ext-container");
     if (darkMode.matches || darkModeStyle) {
         container.classList.add("xend-ext-dark");
@@ -421,7 +455,7 @@ function createDashboard(node: any) {
     const pageTpl = `
     <div class="xend-ext-dashboard-header">
         <div>Dashboard</div>
-        <button id="xend-ext-dashboard-settings-btn"></button>
+        <button id="xend-ext-dashboard-settings-btn" title="Settings"><img src="${state.user.avatar}" alt="" draggable="false" /></button>
     </div>
     
 <div class="tabs">
@@ -431,8 +465,8 @@ function createDashboard(node: any) {
       <div class="xend-ext-dashboard-column-left"> 
         <div class="xend-ext-dashboard-news">
             <img class="xend-ext-dashboard-news-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
-            <div class="xend-ext-dashboard-news-user">@elonmusk</div>
-            <div class="xend-ext-dashboard-news-time">13h ago</div>
+            <div class="xend-ext-dashboard-news-user"><a href="/elonmusk">@elonmusk</a></div>
+            <div class="xend-ext-dashboard-news-time">&bullet;&nbsp;13h ago</div>
         </div>
         <div class="xend-ext-dashboard-news-title">
         Sold 500k doge to buy 420 @tesla keys
@@ -448,8 +482,8 @@ function createDashboard(node: any) {
       <div class="xend-ext-dashboard-column-left"> 
         <div class="xend-ext-dashboard-news">
             <img class="xend-ext-dashboard-news-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
-            <div class="xend-ext-dashboard-news-user">@LewisHamilton</div>
-            <div class="xend-ext-dashboard-news-time">15h ago</div>
+            <div class="xend-ext-dashboard-news-user"><a href="/LewisHamilton">@LewisHamilton</a></div>
+            <div class="xend-ext-dashboard-news-time">&bullet;&nbsp;15h ago</div>
         </div>
         <div class="xend-ext-dashboard-news-title">
         Crashing on lap 50, place your bets
@@ -492,51 +526,52 @@ function createDashboard(node: any) {
       <div style="clear: both"></div>
     </div>
     
-    <div class="xend-ext-dashboard-row">
-      <div class="xend-ext-dashboard-column-left">         
-            <img class="xend-ext-dashboard-keys-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
-            <div class="xend-ext-dashboard-keys-user">
-            @elonmusk
-            <div>0.441</div>
+    <div class="xend-ext-dashboard-row-container">
+        <div class="xend-ext-dashboard-row">
+          <div class="xend-ext-dashboard-column-left">         
+                <img class="xend-ext-dashboard-keys-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
+                <div class="xend-ext-dashboard-keys-user">
+                <a href="/elonmusk">@elonmusk</a>
+                <div>0.441</div>
+                </div>
+          </div>
+          <div class="xend-ext-dashboard-column-right">
+            <div class="xend-ext-keys-value">
+                <div>50</div>
+                <div>
+                    22.05    
+                </div>
             </div>
-      </div>
-      <div class="xend-ext-dashboard-column-right">
-        <div class="xend-ext-keys-value">
-            50
-            <div>
-                22.05    
+          </div>
+          <div style="clear: both"></div>
+        </div>
+        
+        <div class="xend-ext-dashboard-row">
+          <div class="xend-ext-dashboard-column-left">         
+                <img class="xend-ext-dashboard-keys-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
+                <div class="xend-ext-dashboard-keys-user">
+                <a href="/LewisHamilton">@LewisHamilton</a>
+                <div>0.001</div>
+                </div>
+          </div>
+          <div class="xend-ext-dashboard-column-right">
+            <div class="xend-ext-keys-value">
+                <div>12</div>
+                <div>
+                    0.012    
+                </div>
             </div>
+          </div>
+          <div style="clear: both"></div>
         </div>
       </div>
-      <div style="clear: both"></div>
-    </div>
-    
-    <div class="xend-ext-dashboard-row">
-      <div class="xend-ext-dashboard-column-left">         
-            <img class="xend-ext-dashboard-keys-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
-            <div class="xend-ext-dashboard-keys-user">
-            @LewisHamilton
-            <div>0.001</div>
-            </div>
-      </div>
-      <div class="xend-ext-dashboard-column-right">
-        <div class="xend-ext-keys-value">
-            12
-            <div>
-                0.012    
-            </div>
-        </div>
-      </div>
-      <div style="clear: both"></div>
-    </div>
-    
   </div>
 
 
   <div id="content-3">
     <div class="xend-ext-dashboard-profile">
         <textarea>So nice i had to post it twice</textarea>
-        <div class="xend-ext-dashboard-profile-file"></div>
+        <div class="xend-ext-dashboard-profile-file" title="Upload file"></div>
         <button id="xend-ext-dashboard-profile-post">
             Post
         </button>
@@ -546,7 +581,7 @@ function createDashboard(node: any) {
      <div class="xend-ext-dashboard-row">
       <div class="xend-ext-dashboard-column-left"> 
         <div class="xend-ext-dashboard-news">
-            <div class="xend-ext-dashboard-news-time" style="padding-left: 0;">19h ago</div>
+            <div class="xend-ext-dashboard-news-time" style="padding-left: 0;">19h ago&nbsp;&bullet;</div>
             <div class="xend-ext-profile-del">Delete</div>
         </div>
         <div class="xend-ext-dashboard-news-title" style="word-wrap: break-word;">
@@ -610,7 +645,10 @@ function createDashboard(node: any) {
 
     // @ts-ignore
     container.querySelector("#xend-ext-dashboard-settings-btn").addEventListener("click", e => {
-        logout();
+        // @ts-ignore
+        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
     });
 }
 
@@ -634,6 +672,8 @@ const createProfileMenu = (node: any) => {
     }
 
     const container = document.createElement('div');
+    container.style.opacity = "0";
+    container.style.transition = "opacity .3s";
     container.classList.add("xend-ext-container");
     if (darkMode.matches || darkModeStyle) {
         container.classList.add("xend-ext-dark");
@@ -675,7 +715,7 @@ const createProfileMenu = (node: any) => {
         Keys
         <div class="xend-ext-menu-key">
             <div class="xend-ext-menu-key-value">
-                10
+                <input type="text" value="10" />
                 <div>4.41</div>
             </div>
             <button id="xend-ext-menu-key-buy">
@@ -704,6 +744,145 @@ const createProfileMenu = (node: any) => {
     aside.getElementsByTagName('div')[0].appendChild(container);
 
 };
+
+function createSettings(node: any) {
+    const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
+    const para = document.querySelector("body");
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(para);
+    const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
+
+    node.style.height = '425px';
+    if (!state.authorized || state.walletConnected) {
+        node.style.display = 'none';
+    }
+    node.getElementsByTagName('aside')[0].setAttribute('xend', 'settings');
+    if (node.getElementsByTagName('span')[0]) {
+        node.getElementsByTagName('span')[0].remove();
+    }
+    if (node.getElementsByTagName('h2')[0]) {
+        node.getElementsByTagName('h2')[0].remove();
+    }
+
+    const container = document.createElement('div');
+    container.style.opacity = "0";
+    container.style.transition = "opacity .3s";
+    container.classList.add("xend-ext-container");
+    if (darkMode.matches || darkModeStyle) {
+        container.classList.add("xend-ext-dark");
+    } else {
+        container.classList.add("xend-ext-white");
+        // @ts-ignore
+        document.querySelector(':root').style.setProperty('--xendwhite', '#333333');
+    }
+
+    const pageTpl = `
+    <div class="xend-ext-settings-header">
+        <div class="xend-ext-settings-top"><button id="xend-ext-settings-close"></button> Settings</div>
+        <div class="xend-ext-settings-subtitle">
+            <img class="xend-ext-settings-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
+            <div class="xend-ext-settings-user">${state.user.name}<div title="Copy">${getShortHash(state.user.address)}</div></div>
+            <button id="xend-ext-logout">Logout</button>
+        </div>
+    </div>
+    <div id="xendExtSettingsList" class="xend-ext-settings-content">
+        <div id="xendExtSettingsContent" class="xend-ext-settings-row">
+          <div class="xend-ext-settings-column-left"> 
+            <div class="xend-ext-settings-title">Content lock</div>
+            Minimum keys required to view your content.
+          </div><div class="xend-ext-settings-column-right">2</div>
+          <div style="clear: both"></div>
+        </div>
+        <div id="xendExtSettingsSubscriptions" class="xend-ext-settings-row">
+          <div class="xend-ext-settings-column-left"> 
+            <div class="xend-ext-settings-title">Subscriptions</div>
+            Allow users to unlock your content for a monthly fee.
+          </div><div class="xend-ext-settings-column-right">0.4 ETH</div>
+          <div style="clear: both"></div>
+        </div>
+        <div id="xendExtSettingsFriend" class="xend-ext-settings-row">
+          <div class="xend-ext-settings-column-left"> 
+            <div class="xend-ext-settings-title">Friend.Tech compatibility</div>
+            Allow Friend.Tech keyholders to view your content. Minimum keys amount from content lock applies.
+          </div><div class="xend-ext-settings-column-right">On</div>
+          <div style="clear: both"></div>
+        </div>
+        <div id="xendExtSettingsDelete" class="xend-ext-settings-row">
+          <div class="xend-ext-settings-column-left"> 
+            <div class="xend-ext-settings-title">Delete all my data</div>
+            Your account will still be tied to the same ETH address.
+          </div><div class="xend-ext-settings-column-right">&nbsp;</div>
+          <div style="clear: both"></div>
+        </div>
+    </div>
+    <div id="xendExtSettingsDetail" style="display: none">
+        <div id="xendExtSettingsDetailBack">Back</div>
+        <div class="xend-ext-settings-detail-left">
+            <div class="xend-ext-settings-detail-title"></div>
+            <div class="xend-ext-settings-detail-form">
+                <input type="text" value="0.2" />
+            </div>
+        </div><div class="xend-ext-settings-detail-right">
+        <input id="xendExtSubscriptionCheckbox" type="checkbox" checked /><label for="xendExtSubscriptionCheckbox"></label>
+        <button id="xendExtSubscriptionUpdate">Update</button>
+        </div>
+    </div>
+    
+  
+    `;
+    container.innerHTML = pageTpl;
+
+    const aside = node.getElementsByTagName('aside')[0];
+    aside.replaceChildren(aside.children[0]);
+    aside.getElementsByTagName('div')[0].appendChild(container);
+
+    container.querySelectorAll(".xend-ext-settings-row").forEach(el => {
+        el.addEventListener("click", e => {
+            // @ts-ignore
+            container.querySelector("#xendExtSettingsList").style.display = "none";
+            // @ts-ignore
+            container.querySelector(".xend-ext-settings-detail-title").innerHTML =
+                // @ts-ignore
+                el.querySelector(".xend-ext-settings-column-left").innerHTML.replace("xend-ext-settings-title", "");
+            // @ts-ignore
+            container.querySelector("#xendExtSettingsDetail").style.display = "block";
+
+            if (el.id == "xendExtSettingsSubscriptions") {
+                // @ts-ignore
+                container.querySelector(".xend-ext-settings-detail-right").style.visibility = "visible";
+                // @ts-ignore
+                container.querySelector(".xend-ext-settings-detail-form").style.visibility = "visible";
+            } else {
+                // @ts-ignore
+                container.querySelector(".xend-ext-settings-detail-right").style.visibility = "hidden";
+                // @ts-ignore
+                container.querySelector(".xend-ext-settings-detail-form").style.visibility = "hidden";
+            }
+
+        }, false);
+    });
+    // @ts-ignore
+    container.querySelector("#xendExtSettingsDetailBack").addEventListener("click", e => {
+        // @ts-ignore
+        container.querySelector("#xendExtSettingsDetail").style.display = "none";
+        // @ts-ignore
+        container.querySelector("#xendExtSettingsList").style.display = "block";
+    }, false);
+
+    // @ts-ignore
+    container.querySelector("#xend-ext-settings-close").addEventListener("click", e => {
+        // @ts-ignore
+        document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+    });
+
+    // @ts-ignore
+    container.querySelector("#xend-ext-logout").addEventListener("click", e => {
+        logout();
+    }, false);
+
+}
 
 
 const onMutation = async (mutations: MutationRecord[]) => {
@@ -734,15 +913,15 @@ const onMutation = async (mutations: MutationRecord[]) => {
                     createDashboard(dashboardMenu);
                     sidebar.insertBefore(dashboardMenu, sidebar.children[2]);
 
+                    // Settings
+                    const settingsMenu = n.parentElement.parentElement.cloneNode(true);
+                    createSettings(settingsMenu);
+                    sidebar.insertBefore(settingsMenu, sidebar.children[2]);
+
                     // Profile
                     const profileMenu = n.parentElement.parentElement.cloneNode(true);
                     createProfileMenu(profileMenu);
                     sidebar.insertBefore(profileMenu, sidebar.children[2]);
-
-                    // Settings
-                    //const settingsMenu = n.parentElement.parentElement.cloneNode(true);
-                    //createSettings(settingsMenu);
-                    //sidebar.insertBefore(settingsMenu, sidebar.children[2]);
 
                 });
 
@@ -761,9 +940,24 @@ const observe = () => {
 };
 observe();
 
+const mo2 = new MutationObserver(async (mutations) => {
+    for (const mutation of mutations) {
+        if (mutation.attributeName === "style") {
+            setThemeColors();
+        }
+    }
+});
+const observe2 = () => {
+    mo2.observe(document.body, {
+        attributes: true,
+        subtree: false,
+        childList: false,
+    });
+};
+observe2();
+
 // Test profile page
 setInterval(() => {
-    // @ts-ignore
     if (state.authorized && state.walletConnected
         && document.querySelector('a[href="/settings/profile"]')
         && document.querySelector('aside[xend="profile"]')
@@ -772,14 +966,12 @@ setInterval(() => {
     ) {
         // @ts-ignore
         document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
-    } else { // @ts-ignore
-        if (!document.querySelector('a[href="/settings/profile"]')
-                && document.querySelector('aside[xend="profile"]')
-            // @ts-ignore
-                && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == ""
-            ) {
-                // @ts-ignore
-            document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
-            }
+    } else if (!document.querySelector('a[href="/settings/profile"]')
+        && document.querySelector('aside[xend="profile"]')
+        // @ts-ignore
+        && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == ""
+    ) {
+        // @ts-ignore
+        document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
     }
 }, 750);
