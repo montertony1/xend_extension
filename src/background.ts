@@ -1,5 +1,5 @@
 chrome.runtime.onConnect.addListener(function(port) {
-    console.assert(port.name === "twitterAuth");
+    console.assert(port.name === "authorize");
     port.onMessage.addListener(async function(msg) {
       if (msg.task === "startTwitterAuth") {
         try {
@@ -61,6 +61,34 @@ chrome.runtime.onConnect.addListener(function(port) {
             });
         } catch(error) {
             console.log("error");
+        }
+      }
+
+      if (msg.task === "setWalletAddr") {
+        try {
+            const params = { address: msg.address, uid: msg.uid };
+            const res = await (await fetch(`https://burntracker.io/backend/user/set_address`, {
+                method: 'POST',
+                body: JSON.stringify(params),
+                headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+            })).json();
+
+            console.log("Set Address: ", res);
+
+            if (res.result != undefined) {
+                port.postMessage({
+                    result: "statusWalletSet", 
+                    status: true
+                });
+            } else {
+                console.log("error1");
+                port.postMessage({
+                    result: "statusWalletSet", 
+                    status: false
+                });
+            }
+        } catch(error) {
+            console.log("error2");
         }
       }
     });

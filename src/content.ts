@@ -11,6 +11,8 @@ const logoB = chrome.runtime.getURL("/static/img/xend-small-black.png");
 const avatarImg = chrome.runtime.getURL("/static/img/avatar.png");
 const styleList = chrome.runtime.getURL("/static/css/style.css");
 
+var port = chrome.runtime.connect({name: "authorize"});
+
 let state = {
     loggedIn: false,
     authorized: false,
@@ -189,13 +191,15 @@ function injectStyleList() {
 }
 
 function login() {
+    // @ts-ignore
     if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
+        // @ts-ignore
         document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
         document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
         return;
     }
 
-    var port = chrome.runtime.connect({name: "twitterAuth"});
     port.postMessage({task: "startTwitterAuth"});
     port.onMessage.addListener(function(msg) {
         if (msg.result === "successTwitterAuth") {
@@ -213,8 +217,11 @@ function login() {
                 state: state
             });
 
+            // @ts-ignore
             if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
+                // @ts-ignore
                 document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
+                // @ts-ignore
                 document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
             }
         }
@@ -279,20 +286,49 @@ async function connectWallet() {
     }
 
     state.walletConnected = res.result;
-    state.user.address = res.address;
 
-    chrome.storage.local.set({
-        state: state
-    });
-    if (state.authorized && state.walletConnected
-        && document.querySelector('aside[xend="dashboard"]')
-        // @ts-ignore
-        && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
-    ) {
-        // @ts-ignore
-        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+    if (state.user.address) {
+        port.postMessage({
+            task: "setWalletAddr",
+            address: res.address,
+            uid: state.user.uid
+        });
+        port.onMessage.addListener(function(msg) {
+            if (msg.result === "statusWalletSet") {
+                console.log("statusWalletSet: ", msg.result);
+                if (msg.result) {
+                    state.user.address = res.address;
+                    chrome.storage.local.set({
+                        state: state
+                    });
+                    if (state.authorized && state.walletConnected
+                        && document.querySelector('aside[xend="dashboard"]')
+                        // @ts-ignore
+                        && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
+                    ) {
+                        // @ts-ignore
+                        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+                        // @ts-ignore
+                        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+                    }    
+                }
+            }
+        });
+    } else {
+        state.user.address = res.address;
+        chrome.storage.local.set({
+            state: state
+        });
+        if (state.authorized && state.walletConnected
+            && document.querySelector('aside[xend="dashboard"]')
+            // @ts-ignore
+            && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
+        ) {
+            // @ts-ignore
+            document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+            // @ts-ignore
+            document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+        }
     }
 }
 
