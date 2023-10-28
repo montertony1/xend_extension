@@ -26,6 +26,7 @@ let state = {
     secret: null,
     file: null,
     loadingArticles: false,
+    loadingKeys: false,
     user: {
         address: "",
         uid: "",
@@ -99,28 +100,98 @@ let state = {
         avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
         name: "elonmusk",
         price: "0.0012",
-        balance: "50"
+        balance: "51"
     },
     {
         uid: "123412341234",
         avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
         name: "elonmusk",
         price: "0.0012",
-        balance: "50"
+        balance: "52"
     },
     {
         uid: "123412341234",
         avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
         name: "elonmusk",
         price: "0.0012",
-        balance: "50"
+        balance: "53"
     },
     {
         uid: "123412341234",
         avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
         name: "elonmusk",
         price: "0.0012",
-        balance: "50"
+        balance: "54"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "55"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "56"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "57"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "58"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "59"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "60"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "61"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "62"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "63"
+    },
+    {
+        uid: "123412341234",
+        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+        name: "elonmusk",
+        price: "0.0012",
+        balance: "64"
     }]
 };
 
@@ -721,6 +792,32 @@ const getTotalPrice = (price: any, balance: any) => {
     return (nPrice * nBalance).toFixed(4);
 }
 
+function getKeyArray(data: any) {
+    let content = "";
+
+    for (let i = 0; i < data.keys.length; i++) {
+        content += `<div class="xend-ext-dashboard-row">
+                        <div class="xend-ext-dashboard-column-left">         
+                            <img class="xend-ext-dashboard-keys-logo" src="${data.keys[i].avatar}" alt="avatar" draggable="false" />
+                            <div class="xend-ext-dashboard-keys-user">
+                            <a href="/${data.keys[i].name}">@${data.keys[i].name}</a>
+                            <div>${getPrice(data.keys[i].price)}</div>
+                            </div>
+                        </div>
+                        <div class="xend-ext-dashboard-column-right">
+                            <div class="xend-ext-keys-value">
+                                <div>${data.keys[i].balance}</div>
+                                <div>
+                                    <div class="xend-ext-dashboard-currency"></div>
+                                    <span>${getTotalPrice(data.keys[i].price, data.keys[i].balance)}</span>  
+                                </div>
+                            </div>
+                        </div>
+                        <div style="clear: both"></div>
+                    </div>`;
+  }
+  return content;
+}
 function getKeys(container: any, data: any) {
     let content = 
         `<div class="xend-ext-dashboard-keys">
@@ -754,29 +851,9 @@ function getKeys(container: any, data: any) {
 
         <div id="xend-ext-dashboard-row-container">`;
     
-    for (let i = 0; i < data.keys.length; i++) {
-        content += `<div class="xend-ext-dashboard-row">
-                        <div class="xend-ext-dashboard-column-left">         
-                            <img class="xend-ext-dashboard-keys-logo" src="${data.keys[i].avatar}" alt="avatar" draggable="false" />
-                            <div class="xend-ext-dashboard-keys-user">
-                            <a href="/${data.keys[i].name}">@${data.keys[i].name}</a>
-                            <div>${getPrice(data.keys[i].price)}</div>
-                            </div>
-                        </div>
-                        <div class="xend-ext-dashboard-column-right">
-                            <div class="xend-ext-keys-value">
-                                <div>${data.keys[i].balance}</div>
-                                <div>
-                                    <div class="xend-ext-dashboard-currency"></div>
-                                    <span>${getTotalPrice(data.keys[i].price, data.keys[i].balance)}</span>  
-                                </div>
-                            </div>
-                        </div>
-                        <div style="clear: both"></div>
-                    </div>`;
-  }  
+  content += getKeyArray(data);
     
-  content += '</div>';
+  content += '<div id="xend-ext-keys-loader">&nbsp;</div> </div>';
 
   return content;
 }
@@ -1017,7 +1094,7 @@ function createDashboard(node: any) {
   </div>
 
   <div id="content-2">
-  ` + getKeys(container, { ...state.key, keys: state.keys }) + `<div id="xend-ext-keys-loader">&nbsp;</div>  
+  ` + getKeys(container, { ...state.key, keys: state.keys }) + ` 
   </div>
 
 
@@ -1094,6 +1171,7 @@ function createDashboard(node: any) {
                 updateKeysPage();
             }
         });
+        
         // @ts-ignore
         container.querySelector('#content-2').classList.add("selected");
         // @ts-ignore
@@ -1167,8 +1245,49 @@ function createDashboard(node: any) {
         const item = getKeys(container, { avatar: state.user.avatar, ...state.key, keys });
 
         // @ts-ignore
-        document.getElementById("content-2").innerHTML = item
-            + `<div id="xend-ext-articles-loader">&nbsp;</div>`;
+        document.getElementById("content-2").innerHTML = item;
+
+        // @ts-ignore
+        document.getElementById("xend-ext-dashboard-row-container").addEventListener("scroll", e => {
+            console.log("---");
+            if (!state.loadingArticles && document.querySelector("#xend-ext-keys-loader")
+                // @ts-ignore
+                && (document.querySelector("#xend-ext-keys-loader").offsetTop <
+                    // @ts-ignore
+                    document.querySelector("#xend-ext-keys-loader").parentNode.offsetHeight
+                    // @ts-ignore
+                    + document.querySelector("#xend-ext-keys-loader").parentNode.scrollTop)
+            ) {
+                state.loadingArticles = true;
+                // @ts-ignore
+                const scrollTop = document.querySelector("#xend-ext-dashboard-row-container").scrollTop;
+                const numOfKeys = document.querySelectorAll("#xend-ext-dashboard-row-container .xend-ext-dashboard-row").length;
+
+                let keys = [];
+                            
+                console.log(numOfKeys, scrollTop);
+
+                for (let i = numOfKeys; i < state.keys.length; i++) {
+                    keys.push({
+                        ...state.keys[i]
+                    });
+                    if (keys.length == state.keysPageInfo.pageSize) {
+                        break;
+                    }
+                }
+
+                console.log(keys);
+                const content = getKeyArray({ keys });
+                console.log(content);
+
+                // @ts-ignore
+                document.getElementById("xend-ext-dashboard-row-container").innerHTML += content; 
+                // @ts-ignore
+                document.getElementById("xend-ext-dashboard-row-container").scrollTop = scrollTop;
+
+                state.loadingArticles = false;
+            }
+        });
     }
 
     const updateProfilePage = () => {
@@ -1433,7 +1552,6 @@ function createDashboard(node: any) {
         });
     });
 
-
     // @ts-ignore
     container.querySelector("#xend-ext-dashboard-profile-articles").addEventListener("scroll", e => {
         if (!state.loadingArticles && document.querySelector("#xend-ext-articles-loader")
@@ -1461,7 +1579,6 @@ function createDashboard(node: any) {
 
             port.onMessage.addListener(function(msg) {
                 if (msg.result === "setNextArticlesPage") {
-                    console.log("setNextArticlesPage", msg);
                     // @ts-ignore
                     msg.articles.forEach(article => {
                         state.user.articles.push(article);
@@ -1472,7 +1589,6 @@ function createDashboard(node: any) {
                     // @ts-ignore
                     document.querySelector("#xend-ext-dashboard-profile-articles").scrollTop = scrollTop;
                     state.loadingArticles = false;
-                    //updateProfilePage();
                 }
             });
 
@@ -1828,4 +1944,4 @@ const clearState = () => {
     chrome.storage.local.set({state: ""});
 }
 
-// clearState();
+clearState();
