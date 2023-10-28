@@ -1,0 +1,332 @@
+@import url(http://fonts.googleapis.com/css?family=Roboto:400,400italic,500,500italic,700,700italic,900,900italic,300italic,300,100italic,100);
+
+html {
+  font-family: 'Roboto', sans-serif;
+  width: 400px; /* max: 1000px */
+  height: 200px; /* max: 750px */
+  background-color: #000;
+  color: white;
+}
+
+.App {
+  margin: 0;
+  padding: 0;
+  height: 100vh; /* Set the body height to the viewport height */
+  display: flex;
+  flex-direction: column;
+}
+
+.App-logo {
+  height: 30px;
+  pointer-events: none;
+  padding-bottom: 20px;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+.Button-rounded {
+  background-color: #fff;
+  border-radius: 15px;
+  border: none;
+  height: 30px;
+  padding-left: 15px;
+  padding-right: 15px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #000;
+  cursor: pointer;
+  text-align: center;
+}
+
+
+.Img-rounded {
+  height: 36px;
+  width: 36px;
+  border-radius: 18px;
+  border: none;
+}
+
+.App-header {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.App-main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Top */
+.User-container {
+  padding-top: 15px;
+  padding-left: 15px;
+  padding-right: 15px;
+  display: flex;
+  justify-content: space-between; /* Distribute items to the left and right */
+  align-items: center; /* Align items to the top */
+  text-align: left;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.User-item {
+  flex: 0 0 auto; /* Prevent items from growing or shrinking */
+  gap: 6px;
+}
+
+.Item-content {
+  margin-right: 5px; /* Spacing to the right of the first item */
+}
+
+/* Adjust the margins to control spacing */
+.User-item:nth-child(1) {
+  display: flex;
+  align-items: center; /* Align items to the top */
+  margin-right: 10px; /* Spacing to the right of the first item */
+}
+
+.User-column {
+  display: flex;
+  align-items: center; /* Align items to the top */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+
+.Header-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.Wide-logo {
+  /* width: 68px; */
+  height: 18px;
+  vertical-align: middle;
+}
+
+.Wallet-update {
+  height: 18px;
+  background-color: rgba(0,0,0,0);
+  border: none;
+  cursor: pointer;
+}
+
+.Wallet-img {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.Input-container {
+  display: flex;
+  background-color: #1C1C1C;
+  align-items: center;
+  width: 270px; /* Adjust the width as needed */
+  border: none;
+  height: 26px;
+  border-radius: 18px; /* Adjust the border radius to make it rounded */
+  padding: 5px; /* Add padding around the input container */
+}
+
+.Rounded-input {
+  width: 100%;
+  border: none;
+  padding: 10px; /* Add padding left and right of the text */
+  outline: none; /* Remove the default focus outline */
+  box-sizing: border-box; /* Include padding in width calculation */
+  color: #fff; 
+  font-size: 15px;
+  font-weight: 500;
+  background-color: rgba(0,0,0,0);
+}
+
+.Rounded-input::placeholder {
+  color: #fff;
+  opacity: 0.5;
+}
+
+.Button-logout {
+  height: 36px !important;
+  border-radius: 18px;
+  background-color: #2A2D33;
+  color: #fff;
+}
+
+hr {
+  display: block;
+  height: 1px;
+  border: 0;
+  border-top: 1px solid #1C1C1C;
+  margin: 1em 0;
+  padding: 0;
+}
+
+.Dynamic-list-container {
+  flex: 1; /* Grow and fill remaining vertical space */
+  overflow: auto; /* Enable scrolling for overflow content */
+  max-height: 100%; /* Set the maximum height to 100% of the body */
+}
+
+.Dynamic-list {
+  list-style-type: disc; /* Use bullet points for list items */
+  padding-left: 16px;
+  padding-right: 16px;
+  margin: 0;
+}
+
+.Dynamic-list li {
+  padding: 5px 0;
+  color: #333;
+  text-align: left;
+}
+
+.List-from {
+  width: 270px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #828282;
+}
+
+.List-message {
+  width: 270px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.List-value {
+  width: 90px;
+  font-size: 20px;
+  text-align: right;
+  font-weight: 600;
+  color: #fff;
+}
+
+.List-container {
+  display: flex;
+  justify-content: space-between; /* Distribute items to the left and right */
+  align-items: center; /* Align items to the top */
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.Link-button {
+  padding-left: 3px;
+  background-color: rgba(0,0,0,0);
+  border: none;
+  cursor: pointer;
+}
+
+.Link-img {
+  width: 14px;
+  height: 14px;
+  /* vertical-align: top; */
+  user-select: none;
+}
+
+.Menu {
+  margin-top: 10px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+
+.Menu-button {
+  font-size: 15px;
+  font-weight: 600;
+  color: fff;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background-color: rgba(0,0,0,0);
+  text-decoration: none;
+  display: inline-block;
+  position: relative;
+  padding: 10px 8px;
+  transform: all 0.3s ease;
+}
+
+.Menu-button-selected {
+  color: #fff;
+}
+
+.Menu-button-unselected {
+  color: #666666;
+}
+
+.Menu-underline {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  border-radius: 2px;
+  background-color: rgb(29, 155, 240);
+}
+
+.Menu-underline-selected {
+  background-color: rgb(29, 155, 240);
+}
+
+.Menu-underline-unselected {
+  background-color: rgba(0,0,0,0);
+}
+
+.Settings-input-container {
+  display: flex;
+  align-items: center;
+  border: none;
+  border-radius: 20px; /* Adjust the border-radius to control the roundness of corners */
+  padding: 5px;
+  margin-left: 10px;
+  margin-right: 10px;
+  /* width: 100%; */
+  background-color: #2A2D33;
+}
+
+.Settings-input {
+  flex: 1;
+  align-items: center;
+  border: none;
+  outline: none;
+  text-align: right;
+  /* border-radius: 20px; Adjust the border-radius to control the roundness of corners */
+  /* padding: 5px; */
+  /* width: 100%; */
+  font-weight: 500;
+  font-size: 15px;
+  background-color: rgba(0,0,0,0);
+  color: #fff;
+}
+
+
+.Settings-input-text-left,
+.Settings-input-text-right {
+  padding: 5px 10px;
+  font-weight: 600;
+  font-size: 15px;
+  color: #70757A;
+}
+
+.Settings-input-text-left {
+  margin-right: 5px;
+}
+
+.Settings-input-text-right {
+  margin-left: 5px;
+}
