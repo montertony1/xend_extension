@@ -179,6 +179,7 @@
 .xend-ext-dashboard-column-left {
     float: left;
     width: calc(100% - 80px);
+    align-items: center;
 }
 .xend-ext-dashboard-column-right {
     width: auto;
@@ -252,6 +253,8 @@ img.xend-ext-dashboard-avatar {
     height: 37px;
     vertical-align: middle;
     box-sizing: border-box;
+    display: flex;
+    align-items: center;
 }
 .xend-ext-dashboard-keys-logo {
     width: 27px;
@@ -424,6 +427,7 @@ div#xend-ext-menu-value div {
     position: relative;
     float: right;
     width: 216px;
+    margin-left: 10px;
 }
 .xend-ext-menu-content {
     width: 100%;
@@ -431,6 +435,7 @@ div#xend-ext-menu-value div {
     font-size: 17px;
     font-weight: bold;
     margin-top: -15px;
+    display: flex;
 }
 .xend-ext-menu-key {
     position: relative;
@@ -443,11 +448,12 @@ div#xend-ext-menu-value div {
     text-align: center;
     margin-top: 10px;
     margin-bottom: 20px;
+    display: flex;
 }
 .xend-ext-menu-key-value,
 #xend-ext-menu-key-buy,
 #xend-ext-menu-key-sell {
-    width: 25%;
+    width: 50px;
     box-sizing: border-box;
     display: inline-block;
     vertical-align: middle;

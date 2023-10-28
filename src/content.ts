@@ -783,13 +783,13 @@ function getFeed(container: any) {
 
 const getPrice = (price: any) => {
     let nPrice = price * 1;
-    return nPrice.toFixed(4);
+    return nPrice.toFixed(5);
 }
 
 const getTotalPrice = (price: any, balance: any) => {
     let nPrice = price * 1;
     let nBalance = balance * 1;
-    return (nPrice * nBalance).toFixed(4);
+    return (nPrice * nBalance).toFixed(5);
 }
 
 function getKeyArray(data: any) {
@@ -1171,7 +1171,7 @@ function createDashboard(node: any) {
                 updateKeysPage();
             }
         });
-        
+
         // @ts-ignore
         container.querySelector('#content-2').classList.add("selected");
         // @ts-ignore
@@ -1619,6 +1619,7 @@ const createProfileMenu = (node: any) => {
     container.style.opacity = "0";
     container.style.transition = "opacity .3s";
     container.classList.add("xend-ext-container");
+    
     if (darkMode.matches || darkModeStyle) {
         container.classList.add("xend-ext-dark");
     } else {
@@ -1655,7 +1656,7 @@ const createProfileMenu = (node: any) => {
             <div class="xend-ext-menu-up-trend">14%</div>
             </div>
         </div>
-        <div class="xend-ext-menu-right-col">
+        <div id="" class="xend-ext-menu-right-col">
         Keys
         <div class="xend-ext-menu-key">
             <div class="xend-ext-menu-key-value">
@@ -1930,13 +1931,13 @@ setInterval(() => {
         document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
     } else { // @ts-ignore
         if (!document.querySelector('a[href="/settings/profile"]')
-                && document.querySelector('aside[xend="profile"]')
+            && document.querySelector('aside[xend="profile"]')
             // @ts-ignore
-                && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == ""
-            ) {
-                // @ts-ignore
+            && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == ""
+        ) {
+            // @ts-ignore
             document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
-            }
+        }
     }
 }, 750);
 
@@ -1944,4 +1945,4 @@ const clearState = () => {
     chrome.storage.local.set({state: ""});
 }
 
-clearState();
+// clearState();
