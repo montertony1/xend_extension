@@ -398,12 +398,22 @@ img.xend-ext-dashboard-avatar {
 .xend-ext-menu-header {
     width: 100%;
     color: var(--xendmaincolor);
+    display: flex;
+    justify-content: space-between;
+}
+.xend-ext-menu-header-userinfo {
+    display: flex;
+    justify-content: flex-start;
+    position: relative;
 }
 .xend-ext-menu-user {
     display: inline-block;
     font-size: 18px;
     font-weight: bold;
     margin-top: 2px;
+    margin-left: 8px;
+    position: absolute;
+    margin-left: 33px;
 }
 div#xend-ext-menu-value {
     float: right;
@@ -439,7 +449,7 @@ div#xend-ext-menu-value div {
 }
 .xend-ext-menu-key {
     position: relative;
-    width: 100%;
+    width: 194px;
     background-color: #003f55;
     border-radius: 14px;
     padding: 4px;
@@ -457,6 +467,7 @@ div#xend-ext-menu-value div {
     box-sizing: border-box;
     display: inline-block;
     vertical-align: middle;
+    margin-left: 5px;
 }
 .xend-ext-menu-key-value {
     width: 46%;

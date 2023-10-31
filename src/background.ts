@@ -1,3 +1,5 @@
+import { resolveCname } from "dns";
+
 chrome.runtime.onConnect.addListener(function(port) {
     console.assert(port.name === "authorize");
     port.onMessage.addListener(async function(msg) {
@@ -215,6 +217,23 @@ chrome.runtime.onConnect.addListener(function(port) {
             port.postMessage({
                 result: "successGetMyKeys", 
                 ...data
+            });
+        } else if (msg.task === "getKeyInfo") {
+            let res;
+            try {
+                console.log("getKeyInfo", msg);
+                res = await (await fetch(`http://localhost:3001/backend/user/get_key_detail?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&keyOwnerName=${msg.keyOwnerName}`)).json();
+                console.log("getKeyInfo", res);
+            } catch (error) {
+                console.log("getKeyInfo", error);
+                res = {
+                    result: "error",
+                    data: {}
+                };
+            }
+            port.postMessage({
+                result: "successGetKeyInfo", 
+                data: res
             });
         }
     });

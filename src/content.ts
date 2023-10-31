@@ -3,7 +3,8 @@ import Web3 from 'web3';
 import { ethers } from "ethers";
 import { MetaMaskInpageProvider } from '@metamask/inpage-provider';
 import PortDuplexStream from 'extension-port-stream';
-import { abi, address, chain } from "./config";
+import { abi, address, subscribeAddress, subscribeABI, chain } from "./config";
+import axios from "axios";
 
 // @ts-ignore
 import { detect } from 'detect-browser';
@@ -192,7 +193,21 @@ let state = {
         name: "elonmusk",
         price: "0.0012",
         balance: "64"
-    }]
+    }],
+    profile: {
+        holderNum: "0",
+        keyBalance: "0",
+        priceInETH: "0",
+        changeRate: "0%", 
+        myKeyBalance: "0",
+        subscribeAmt: "1",
+        subscribePriceInETH: "0",
+        isSubscriptionEnabled: false,
+        keyId: "",
+        keyOwnerName: "",
+        keyAvatar: "",
+        keyAddress: ""
+    }
 };
 
 let web3: any = null;
@@ -200,9 +215,25 @@ let walletProvider: any = null;
 let chainID: any = null;
 let contract: any = null;
 let currentWalletAddress: string = "";
+let xendContract: any = null;
+let subscribeContract: any = null;
+let signer: any = null;
 
 const user = {
     pfp: 'https://pbs.twimg.com/profile_images/1606815745215791105/IX8pacjk_400x400.jpg'
+}
+
+const addrTokenWETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+const apiUrl = 'https://api.coingecko.com/api/v3';
+async function getTokenPrice(tokenAddr: string) {
+    try {
+        const response = await axios.get(`${apiUrl}/simple/token_price/ethereum?contract_addresses=${tokenAddr}&vs_currencies=usd&include_market_cap=true`);
+        const tokenPrice = response.data[tokenAddr.toLowerCase()].usd;
+        return tokenPrice;
+    } catch (error: any) {
+        console.error('Error fetching token price:', error.message);
+        return 0;
+    }
 }
 
 const validateMetamaskAddress = (address: string) => {
@@ -325,8 +356,7 @@ const getAccounts = async (provider: AnyNaptrRecord) => {
 const connectWalletFunc = async () => {
     console.log("connectWallet runs....")
     try {
-        const provider = getProvider();
-        walletProvider = provider;
+        const provider = walletProvider;
         //@ts-ignore
         const [accounts, chainId] = await getAccounts(provider);
         if (accounts && chainId) {
@@ -378,10 +408,13 @@ const traverseAndFindAttribute = (node: any, tagName: string): any => {
         }
       }
       const attribute = node.getAttribute('data-testid');
+
       if (attribute === 'UserProfileSchema-test') {
+        console.log("profile schema test");
         const xendSend = document.querySelector('[xend="send"]')
         if (xendSend) {
             const author = JSON.parse(node.innerHTML).author;
+            console.log("author", author);
             const uid = author.identifier;
             console.log('mutationobserver', uid);
             xendSend.getElementsByTagName('span')[0].innerText = `@${author.additionalName}`;
@@ -549,14 +582,8 @@ async function connectWallet() {
             document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
         }
     } else {
-        const provider = new ethers.providers.Web3Provider(walletProvider);
-        const signer = provider.getSigner();
-        const xendContract = new ethers.Contract(address, abi, provider);
-    
         try {
-            console.log("getCreatorSignUpStatus: ", currentWalletAddress);
             const result = await xendContract.connect(signer)["getCreatorSignUpStatus"](currentWalletAddress);
-            console.log(result);
             if (!result) {
                 if (state.authorized && state.walletConnected
                     && document.querySelector('aside[xend="signup"]')
@@ -636,10 +663,6 @@ async function signUp() {
     // @ts-ignore
     let referrer = document.getElementById("xend-ext-signup-referrer-name").value;
     console.log("referrer", referrer, chainID);
-
-    const provider = new ethers.providers.Web3Provider(walletProvider);
-    const signer = provider.getSigner();
-    const xendContract = new ethers.Contract(address, abi, provider);
     
     if (referrer == "") {
         console.log("referrer1: ", referrer);
@@ -898,12 +921,12 @@ function getArticles(container: any, articles: { uid: string; comments: ({ autho
 }
 
 function createLogin(node: any) {
+    console.log("createLogin");
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
     // @ts-ignore
     const compStyles = window.getComputedStyle(para);
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
-
 
     node.style.height = '200px';
     if (state.authorized) {
@@ -949,6 +972,7 @@ function createLogin(node: any) {
 }
 
 function createWalletConnect(node: any) {
+    console.log("createWaleltConnect");
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
     // @ts-ignore
@@ -978,8 +1002,6 @@ function createWalletConnect(node: any) {
         // @ts-ignore
         document.querySelector(':root').style.setProperty('--xendwhite', '#333333');
     }
-
-    console.log("wallet connect", state.user.avatar, state.user.name);
 
     const pageTpl = `
     <img id="xend-ext-wallet-avatar" class="xend-ext-wallet-avatar" src="${state.user.avatar}" alt="avatar" draggable="false" />
@@ -1597,6 +1619,7 @@ function createDashboard(node: any) {
 }
 
 const createProfileMenu = (node: any) => {
+    console.log("createProfileMenu");
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
     // @ts-ignore
@@ -1630,38 +1653,40 @@ const createProfileMenu = (node: any) => {
 
     const pageTpl = `
     <div class="xend-ext-menu-header">
-        <img id="xend-ext-menu-avatar" class="xend-ext-dashboard-keys-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
-        <div id="xend-ext-menu-user" class="xend-ext-menu-user">${state.user.name}</div>
+        <div class="xend-ext-menu-header-userinfo">
+            <img id="xend-ext-menu-avatar" class="xend-ext-dashboard-keys-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
+            <div id="xend-ext-menu-user" class="xend-ext-menu-user">@${state.user.name}</div>
+        </div>
         <div id="xend-ext-menu-value">
-        0.441
-        <div>$495.4</div>
+            <div id="xend-ext-menu-ethprice">0</div>
+            <div id="xend-ext-menu-usdprice">$0</div>
         </div>
     </div>
     <div class="xend-ext-menu-content">
         <div class="xend-ext-menu-left-col">
             <div class="xend-ext-menu-left-row">
             Owned
-            <div>4</div>
+            <div id="xend-ext-menu-sharesbalance">0</div>
             </div>
             <div class="xend-ext-menu-left-row">
             Holders
-            <div>3491</div>
+            <div id="xend-ext-menu-holdernum">0</div>
             </div>
             <div class="xend-ext-menu-left-row">
             Keys
-            <div>7420</div>
+            <div id="xend-ext-menu-sharessupply">0</div>
             </div>
             <div class="xend-ext-menu-left-row">
             24h
-            <div class="xend-ext-menu-up-trend">14%</div>
+            <div id="xend-ext-menu-up-trend" class="xend-ext-menu-up-trend">0%</div>
             </div>
         </div>
-        <div id="" class="xend-ext-menu-right-col">
+        <div class="xend-ext-menu-right-col">
         Keys
         <div class="xend-ext-menu-key">
             <div class="xend-ext-menu-key-value">
-                <input type="text" value="10" />
-                <div>4.41</div>
+                <input type="number" value="0" id="xend-ext-menu-key-input" />
+                <div id="xend-ext-menu-key-price">0</div>
             </div>
             <button id="xend-ext-menu-key-buy">
             Buy
@@ -1671,11 +1696,11 @@ const createProfileMenu = (node: any) => {
             </button>
         </div>
         Premium Content
-        <div class="xend-ext-menu-premium">
-        Hold <em>5 keys</em> or subscribe to unlock. Friend.tech supported.
+        <div id="xend-ext-menu-premium" class="xend-ext-menu-premium">
+        Hold <em>1 keys</em> or subscribe to unlock. Friend.tech supported.
         </div>
         <button id="xend-ext-menu-premium-btn">
-            1 Month • 0.2 ETH
+            1 Month • 1 ETH
         </button>
         </div>
     </div>
@@ -1835,6 +1860,136 @@ function createSettings(node: any) {
     }, false);
 }
 
+const updateBuySellPage = async () => {
+    const WETHPrice = await getTokenPrice(addrTokenWETH);
+    console.log("updateBuySellPage", WETHPrice);
+
+    let usdprice = "";
+    usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
+    console.log(document.getElementById("xend-ext-menu-usdprice"));
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-ethprice").innerHTML = (state.profile.priceInETH * 1).toFixed(5);
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-usdprice").innerHTML = usdprice;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-sharesbalance").innerHTML = state.profile.myKeyBalance;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-holdernum").innerHTML = state.profile.holderNum;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-sharessupply").innerHTML = state.profile.keyBalance;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-up-trend").innerHTML = state.profile.changeRate;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-key-input").addEventListener("change", (e: any) => {
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-price").innerHTML = (e.target.value * Number(state.profile.priceInETH)).toFixed(5);
+    });
+
+    try {
+        const isEnabled = await subscribeContract.connect(signer)["isMonthlySubscriptionEnabled"](state.profile.keyAddress);
+        console.log("subscribe", isEnabled);
+        state.profile.isSubscriptionEnabled = isEnabled;
+
+        if (isEnabled) {
+            const result = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
+            state.profile.subscribePriceInETH = result;
+            console.log("subscribe", result);
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").text = `1 Month • ${state.profile.subscribePriceInETH} ETH`;
+        } else {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").text = `Subscription Disabled`;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").disabled = true;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium").style.opacity = "70%";
+        }
+    } catch (error: any) {
+        console.log("updateBuySellPage", error);
+    }
+
+    document.getElementById("xend-ext-menu-premium-btn")?.addEventListener("click", async (e: any) => {
+        console.log("start subscribe");
+        
+        try {
+            const result = await subscribeContract.connect(signer)["subscribe"](state.profile.keyAddress);
+
+            console.log(result);
+            if (!result.hash) {
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-premium-btn").text = "Subscribed";
+            });
+        } catch (error) {
+            console.log("subscribe", error);
+        }
+    });
+
+    document.getElementById("xend-ext-menu-key-buy")?.addEventListener("click", async (e: any) => {
+        console.log("buy key");
+    });
+
+    document.getElementById("xend-ext-menu-key-sell")?.addEventListener("click", async (e: any) => {
+        console.log("sell key");
+    });
+
+    chrome.storage.local.set({
+        state: state
+    });
+}
+
+const checkURL = async () => {
+    // @ts-ignore
+    document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
+    // @ts-ignore
+    document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+
+    let path = window.location.href;
+    const prefix = "https://twitter.com/";
+    path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
+    
+    port.postMessage({
+        task: "getKeyInfo",
+        keyOwnerName: path,
+        token: state.token,
+        secret: state.secret,
+        uid: state.user.uid
+    });
+
+    port.onMessage.addListener(async function(msg: any) {
+        if (msg.result === "successGetKeyInfo") {
+            console.log("successGetKeyInfo", msg.data);
+            if (msg.data.result == "error") {
+                // @ts-ignore
+                document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+            } else {
+                state.profile.holderNum = msg.data.data.holderNum;
+                state.profile.keyBalance = msg.data.data.keyBalance;
+                state.profile.priceInETH = msg.data.data.priceInETH;
+                state.profile.changeRate = msg.data.data.changeRate;
+                state.profile.myKeyBalance = msg.data.data.myKeyBalance;
+                state.profile.keyId = msg.data.data.keyId;
+                state.profile.keyOwnerName = msg.data.data.keyOwnerName;
+                state.profile.keyAvatar = msg.data.data.keyAvatar;
+                state.profile.keyAddress = msg.data.data.keyAddress;
+                
+                chrome.storage.local.set({
+                    state: state
+                });
+
+                await updateBuySellPage();
+
+                // @ts-ignore
+                document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
+                // @ts-ignore
+                document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+            }
+        }
+    });
+}
 
 const onMutation = async (mutations: MutationRecord[]) => {
     for (const mutation of mutations) {
@@ -1848,7 +2003,12 @@ const onMutation = async (mutations: MutationRecord[]) => {
                     if (!document.getElementById("xendExtStyleList")) {
                         injectStyleList();
                     }
-
+                    walletProvider = getProvider();
+                    
+                    const provider = new ethers.providers.Web3Provider(walletProvider);
+                    signer = provider.getSigner();
+                    subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+                    xendContract = new ethers.Contract(address, abi, provider);
 
                     // Login
                     const loginMenu = n.parentElement.parentElement.cloneNode(true);
@@ -1880,14 +2040,8 @@ const onMutation = async (mutations: MutationRecord[]) => {
                     createProfileMenu(profileMenu);
                     sidebar.insertBefore(profileMenu, sidebar.children[2]);
 
-                    // Settings
-                    //const settingsMenu = n.parentElement.parentElement.cloneNode(true);
-                    //createSettings(settingsMenu);
-                    //sidebar.insertBefore(settingsMenu, sidebar.children[2]);
-
+                    checkURL();
                 });
-
-
             });
         }
     }
@@ -1917,29 +2071,6 @@ const observe2 = () => {
     });
 };
 observe2();
-
-// Test profile page
-setInterval(() => {
-    // @ts-ignore
-    if (state.authorized && state.walletConnected
-        && document.querySelector('a[href="/settings/profile"]')
-        && document.querySelector('aside[xend="profile"]')
-        // @ts-ignore
-        && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == "none"
-    ) {
-        // @ts-ignore
-        document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
-    } else { // @ts-ignore
-        if (!document.querySelector('a[href="/settings/profile"]')
-            && document.querySelector('aside[xend="profile"]')
-            // @ts-ignore
-            && document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display == ""
-        ) {
-            // @ts-ignore
-            document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
-        }
-    }
-}, 750);
 
 const clearState = () => {
     chrome.storage.local.set({state: ""});
