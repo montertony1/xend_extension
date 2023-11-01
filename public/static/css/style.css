@@ -549,11 +549,15 @@ div#xend-ext-menu-value div {
     color: var(--xendmaincolor);
     font-size: 17px;
 }
-.xend-ext-menu-up-trend {
+.xend-ext-menu-up-trend-short {
     color: #00da74 !important;
     padding-left: 20px;
     background: url(/static/img/up-trend.png) 0px 3px no-repeat;
     background-size: 14px;
+}
+.xend-ext-menu-up-trend-long {
+    color: #00da74 !important;
+    font-size: 12px !important;
 }
 .xend-ext-settings-header {
     width: 100%;

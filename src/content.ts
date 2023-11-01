@@ -203,6 +203,7 @@ let state = {
         subscribeAmt: "1",
         subscribePriceInETH: "0",
         isSubscriptionEnabled: false,
+        isSubscribed: false,
         keyId: "",
         keyOwnerName: "",
         keyAvatar: "",
@@ -1678,7 +1679,7 @@ const createProfileMenu = (node: any) => {
             </div>
             <div class="xend-ext-menu-left-row">
             24h
-            <div id="xend-ext-menu-up-trend" class="xend-ext-menu-up-trend">0%</div>
+            <div id="xend-ext-menu-up-trend" class="xend-ext-menu-up-trend-long">0%</div>
             </div>
         </div>
         <div class="xend-ext-menu-right-col">
@@ -1697,7 +1698,7 @@ const createProfileMenu = (node: any) => {
         </div>
         Premium Content
         <div id="xend-ext-menu-premium" class="xend-ext-menu-premium">
-        Hold <em>1 keys</em> or subscribe to unlock. Friend.tech supported.
+        Hold <em>1 keys</em> or <em>subscribe</em> to unlock. Friend.tech supported.
         </div>
         <button id="xend-ext-menu-premium-btn">
             1 Month • 1 ETH
@@ -1879,6 +1880,7 @@ const updateBuySellPage = async () => {
     document.getElementById("xend-ext-menu-sharessupply").innerHTML = state.profile.keyBalance;
     // @ts-ignore
     document.getElementById("xend-ext-menu-up-trend").innerHTML = state.profile.changeRate;
+
     // @ts-ignore
     document.getElementById("xend-ext-menu-key-input").addEventListener("change", (e: any) => {
         // @ts-ignore
@@ -1890,7 +1892,7 @@ const updateBuySellPage = async () => {
         console.log("subscribe", isEnabled);
         state.profile.isSubscriptionEnabled = isEnabled;
 
-        if (isEnabled) {
+        if (isEnabled && state.user.address != state.profile.keyAddress && !state.profile.isSubscribed) {
             const result = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
             state.profile.subscribePriceInETH = result;
             console.log("subscribe", result);
@@ -1902,7 +1904,7 @@ const updateBuySellPage = async () => {
             // @ts-ignore
             document.getElementById("xend-ext-menu-premium-btn").disabled = true;
             // @ts-ignore
-            document.getElementById("xend-ext-menu-premium").style.opacity = "70%";
+            document.getElementById("xend-ext-menu-premium").style.opacity = "50% !important";                        
         }
     } catch (error: any) {
         console.log("updateBuySellPage", error);
@@ -1912,16 +1914,22 @@ const updateBuySellPage = async () => {
         console.log("start subscribe");
         
         try {
-            const result = await subscribeContract.connect(signer)["subscribe"](state.profile.keyAddress);
+            const price = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
+            const result = await subscribeContract.connect(signer)["subscribe"](state.profile.keyAddress, {
+                value: parseInt(price._hex).toString()
+            });
 
-            console.log(result);
             if (!result.hash) {
                 return;
             }
             // @ts-ignore
             result.wait().then(res => {
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-premium-btn").text = "Subscribed";
+                if (res.status) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").text = "Subscribed";
+                } else {
+                    alert("Transaction Failed");
+                }
             });
         } catch (error) {
             console.log("subscribe", error);
@@ -1929,11 +1937,81 @@ const updateBuySellPage = async () => {
     });
 
     document.getElementById("xend-ext-menu-key-buy")?.addEventListener("click", async (e: any) => {
-        console.log("buy key");
+        // @ts-ignore
+        let amt = (document.getElementById("xend-ext-menu-key-input")?.value) * 1;
+
+        if (amt <= 0) {
+            alert("Please input positive value.");
+            return;
+        }
+
+        try {
+            let price = await xendContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
+
+            const result = await xendContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
+                value: parseInt(price._hex).toString()
+            });
+
+            if (!result.hash) {
+                alert("Transaction Failed.");
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                console.log(res);
+                // @ts-ignore
+                if (res.status == 1) {
+                    alert("Transaction Succeed.");
+                    setTimeout(() => {
+                        checkURL(false);
+                    }, 1000);
+                } else {
+                    alert("Transaction Failed.");
+                }
+            });
+        } catch (error) {
+            console.log("buyKey", error);
+            alert("Transaction Failed.");
+        }
     });
 
     document.getElementById("xend-ext-menu-key-sell")?.addEventListener("click", async (e: any) => {
-        console.log("sell key");
+        // @ts-ignore
+        let amt = (document.getElementById("xend-ext-menu-key-input")?.value) * 1;
+
+        if (amt <= 0) {
+            alert("Please input positive value.");
+            return;
+        }
+
+        try {
+            let price = await xendContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
+
+            const result = await xendContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
+                value: parseInt(price._hex).toString()
+            });
+
+            if (!result.hash) {
+                alert("Transaction Failed.");
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                console.log(res);
+                // @ts-ignore
+                if (res.status == 1) {
+                    alert("Transaction Succeed.");
+                    setTimeout(() => {
+                        checkURL(false);
+                    }, 1000);
+                } else {
+                    alert("Transaction Failed.");
+                }
+            });
+        } catch (error) {
+            console.log("buyKey", error);
+            alert("Transaction Failed.");
+        }
     });
 
     chrome.storage.local.set({
@@ -1941,11 +2019,13 @@ const updateBuySellPage = async () => {
     });
 }
 
-const checkURL = async () => {
-    // @ts-ignore
-    document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
-    // @ts-ignore
-    document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+const checkURL = async (isStart: boolean) => {
+    if (isStart) {
+        // @ts-ignore
+        document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+    }
 
     let path = window.location.href;
     const prefix = "https://twitter.com/";
@@ -1975,6 +2055,7 @@ const checkURL = async () => {
                 state.profile.keyOwnerName = msg.data.data.keyOwnerName;
                 state.profile.keyAvatar = msg.data.data.keyAvatar;
                 state.profile.keyAddress = msg.data.data.keyAddress;
+                state.profile.isSubscribed = msg.data.data.isSubscribed;
                 
                 chrome.storage.local.set({
                     state: state
@@ -2040,7 +2121,7 @@ const onMutation = async (mutations: MutationRecord[]) => {
                     createProfileMenu(profileMenu);
                     sidebar.insertBefore(profileMenu, sidebar.children[2]);
 
-                    checkURL();
+                    checkURL(true);
                 });
             });
         }
