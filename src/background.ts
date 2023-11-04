@@ -5,7 +5,7 @@ chrome.runtime.onConnect.addListener(function(port) {
     port.onMessage.addListener(async function(msg) {
         if (msg.task === "startTwitterAuth") {
             try {
-                const response = await (await fetch(`http://localhost:3001/backend/user/request_access_token`)).json();
+                const response = await (await fetch(`http://82.180.136.36:3001/backend/user/request_access_token`)).json();
                 const authUrl = new URL('https://api.twitter.com/oauth/authenticate');
                 authUrl.searchParams.set('oauth_token', response.token);
                 authUrl.searchParams.set('force_login', 'false');
@@ -20,7 +20,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                     
                     const data = { token: oauth_token, verifier: oauth_verifier, secret: response.secret };
                     try {
-                        const result = await fetch(`http://localhost:3001/backend/user/access_token`, {
+                        const result = await fetch(`http://82.180.136.36:3001/backend/user/access_token`, {
                             method: 'POST',
                             body: JSON.stringify(data),
                             headers: { 'Content-Type': 'application/json','Accept':'application/json'}
@@ -30,7 +30,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                         if (access_token.token) {
                             try {
                                 const params = { token: access_token.token, secret: access_token.secret };
-                                const res = await (await fetch(`http://localhost:3001/backend/user/get_user_profile`, {
+                                const res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_user_profile`, {
                                     method: 'POST',
                                     body: JSON.stringify(params),
                                     headers: { 'Content-Type': 'application/json','Accept':'application/json'}
@@ -65,8 +65,15 @@ chrome.runtime.onConnect.addListener(function(port) {
             }
         } else if (msg.task === "setWalletAddr") {
             try {
-                const params = { address: msg.address, uid: msg.uid };
-                const res = await (await fetch(`http://localhost:3001/backend/user/set_address`, {
+                const params = { 
+                    address: msg.address, 
+                    uid: msg.uid,
+                    signature: msg.signature,
+                    message: msg.message,
+                    token: msg.token,
+                    secret: msg.secret 
+                };
+                const res = await (await fetch(`http://82.180.136.36:3001/backend/user/set_address`, {
                     method: 'POST',
                     body: JSON.stringify(params),
                     headers: { 'Content-Type': 'application/json','Accept':'application/json'}
@@ -100,7 +107,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                 type: msg.type,
                 range: msg.range
             };
-            const result = await (await fetch(`http://localhost:3001/backend/user/post_article`, {
+            const result = await (await fetch(`http://82.180.136.36:3001/backend/user/post_article`, {
                 method: 'POST',
                 body: JSON.stringify(data),
                 headers: { 'Content-Type': 'application/json','Accept':'application/json'}
@@ -126,7 +133,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                 start: msg.start,
                 num: msg.num
             };
-            const result = await (await fetch(`http://localhost:3001/backend/user/post_comment`, {
+            const result = await (await fetch(`http://82.180.136.36:3001/backend/user/post_comment`, {
                 method: 'POST',
                 body: JSON.stringify(data),
                 headers: { 'Content-Type': 'application/json','Accept':'application/json'}
@@ -140,10 +147,10 @@ chrome.runtime.onConnect.addListener(function(port) {
             }
         } else if (msg.task === "openProfilePage") {
             try {
-                const result = await (await fetch(`http://localhost:3001/backend/user/get_article_count?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
+                const result = await (await fetch(`http://82.180.136.36:3001/backend/user/get_article_count?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
                 let articles = [];
                 if (result.count > 0) {
-                    let res = await (await fetch(`http://localhost:3001/backend/user/get_articles_by_uid?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${0}&num=${msg.range}`)).json();
+                    let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_articles_by_uid?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${0}&num=${msg.range}`)).json();
                     console.log(res);
                     articles = res.data;
                 }
@@ -163,7 +170,7 @@ chrome.runtime.onConnect.addListener(function(port) {
         } else if (msg.task === "getNextArticlesPage") {
             let articles = [];
             try {
-                let res = await (await fetch(`http://localhost:3001/backend/user/get_articles_by_uid?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${msg.start}&num=${msg.range}`)).json();
+                let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_articles_by_uid?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${msg.start}&num=${msg.range}`)).json();
                 console.log(res);
                 articles = res.data;
             } catch (error) {
@@ -185,7 +192,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                     start: msg.start,
                     num: msg.num
                 };
-                const result = await (await fetch(`http://localhost:3001/backend/user/delete_article`, {
+                const result = await (await fetch(`http://82.180.136.36:3001/backend/user/delete_article`, {
                     method: 'POST',
                     body: JSON.stringify(data),
                     headers: { 'Content-Type': 'application/json','Accept':'application/json'}
@@ -200,13 +207,13 @@ chrome.runtime.onConnect.addListener(function(port) {
                 }
                 console.log(result);
             } catch (error) {
-                
+                console.log("successDeleteArticle", error);
             }
         } else if (msg.task === "getMyKeys") {
             let data;
             try {
                 console.log("getMyKeys", msg);
-                data = await (await fetch(`http://localhost:3001/backend/user/get_my_keys?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
+                data = await (await fetch(`http://82.180.136.36:3001/backend/user/get_my_keys?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
                 console.log("getMyKeys", data);
             } catch (error) {
                 console.log("getMyKeys", error);
@@ -222,7 +229,7 @@ chrome.runtime.onConnect.addListener(function(port) {
             let res;
             try {
                 console.log("getKeyInfo", msg);
-                res = await (await fetch(`http://localhost:3001/backend/user/get_key_detail?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&keyOwnerName=${msg.keyOwnerName}`)).json();
+                res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_key_detail?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&keyOwnerName=${msg.keyOwnerName}`)).json();
                 console.log("getKeyInfo", res);
             } catch (error) {
                 console.log("getKeyInfo", error);
@@ -235,6 +242,56 @@ chrome.runtime.onConnect.addListener(function(port) {
                 result: "successGetKeyInfo", 
                 data: res
             });
+        } else if (msg.task === "setFriendTechCompatibility") {
+            try {
+                console.log("deleteArticle", msg);
+                const data = {
+                    isCompatible: msg.isCompatible,
+                    uid: msg.uid,
+                    token: msg.token,
+                    secret: msg.secret
+                };
+                const result = await (await fetch(`http://82.180.136.36:3001/backend/user/set_compatibility`, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+                })).json();
+
+                if (result.result == "success") {
+                    port.postMessage({
+                        result: "successSetCompatibility", 
+                        status: true
+                    });
+                } else {
+                    port.postMessage({
+                        result: "successSetCompatibility", 
+                        status: false
+                    });
+                }
+                console.log(result);
+            } catch (error) {
+                console.log("setCompatibility", error);
+            }
+        } else if (msg.task === "getCompatibility") {
+            try {
+                console.log("getCompatibility", msg);
+                let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_compatibility?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
+                let value = false;
+                if (res.result == "success") {
+                    value = res.value;
+                }
+                console.log("getCompatibility: ", res);
+                port.postMessage({
+                    result: "successGetCompatibility", 
+                    isCompatibility: value
+                });
+            } catch (error) {
+                console.log("getCompatibility", error);
+                port.postMessage({
+                    result: "successGetCompatibility", 
+                    isCompatibility: false
+                });
+            }
         }
     });
   });

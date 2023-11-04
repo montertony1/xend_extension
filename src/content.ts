@@ -8,7 +8,7 @@ import axios from "axios";
 
 // @ts-ignore
 import { detect } from 'detect-browser';
-import { createSign } from 'crypto';
+import { createSign, sign } from 'crypto';
 const browser = detect();
 
 const logoW = chrome.runtime.getURL("/static/img/xend-small-white.png");
@@ -16,6 +16,11 @@ const logoB = chrome.runtime.getURL("/static/img/xend-small-black.png");
 const avatarImg = chrome.runtime.getURL("/static/img/avatar.png");
 const avatarImg2 = chrome.runtime.getURL("/static/img/avatar2.png");
 const styleList = chrome.runtime.getURL("/static/css/style.css");
+
+let isPendingSubscribe = false;
+let isPendingBuy = false;
+let isPendingSell = false;
+let isPendingUpdatePrice = false;
 
 var port = chrome.runtime.connect({name: "authorize"});
 
@@ -32,168 +37,133 @@ let state = {
         address: "",
         uid: "",
         avatar: avatarImg,
-        name: "@elonmusk",
+        name: "",
         articleCount: 0,
         currentRange: 0,
+        isSubscriptionEnabled: false,
+        subscribePriceInETH: "0",
+        isCompatibility: false,
         pageSize: 2,
-        articles: [{
-            postID: "3333333333",
+        articles: []
+    },
+    feed: [
+        {
+            postID: "1111111111",
+            author: "@elonmusk",
             uid: "1714271034139127809",
             imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Buy $elondoge now ca: 0xe28b3B32B6c345A34Ff64674606124Dd5Aceca30",
+            message: "Sold 500k doge to buy 420 @tesla keys",
             timestamp: 1698255874291,
             comments: [{
-                postID: "11111111111",
                 author: "@BillGates",
-                authorUID: "23452345",
                 message: "Aped"
             }, {
                 author: "@Zuck",
                 message: "Thanks for the financical advice"
+            }, {
+                author: "@Zuck",
+                message: "I lost 50K"
             }]
-        }]
-    },
-    feed: [{
-        postID: "1111111111",
-        author: "@elonmusk",
-        uid: "1714271034139127809",
-        imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        message: "Sold 500k doge to buy 420 @tesla keys",
-        timestamp: 1698255874291,
-        comments: [{
-            author: "@BillGates",
-            message: "Aped"
         }, {
-            author: "@Zuck",
-            message: "Thanks for the financical advice"
+            postID: "2222222222",
+            author: "@LewisHamilton",
+            uid: "1714271034139127809",
+            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+            message: "Crashing on lap 50, place your bets",
+            timestamp: 1698255874291,
+            comments: []
+        },
+        {
+            postID: "1111111111",
+            author: "@elonmusk",
+            uid: "1714271034139127809",
+            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+            message: "Sold 500k doge to buy 420 @tesla keys",
+            timestamp: 1698255874291,
+            comments: [{
+                author: "@BillGates",
+                message: "Aped"
+            }, {
+                author: "@Zuck",
+                message: "Thanks for the financical advice"
+            }, {
+                author: "@Zuck",
+                message: "I lost 50K"
+            }]
         }, {
-            author: "@Zuck",
-            message: "I lost 50K"
-        }]
-    }, {
-        postID: "2222222222",
-        author: "@LewisHamilton",
-        uid: "1714271034139127809",
-        imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        message: "Crashing on lap 50, place your bets",
-        timestamp: 1698255874291,
-        comments: []
-    }],
+            postID: "2222222222",
+            author: "@LewisHamilton",
+            uid: "1714271034139127809",
+            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+            message: "Crashing on lap 50, place your bets",
+            timestamp: 1698255874291,
+            comments: []
+        },
+        {
+            postID: "1111111111",
+            author: "@elonmusk",
+            uid: "1714271034139127809",
+            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+            message: "Sold 500k doge to buy 420 @tesla keys",
+            timestamp: 1698255874291,
+            comments: [{
+                author: "@BillGates",
+                message: "Aped"
+            }, {
+                author: "@Zuck",
+                message: "Thanks for the financical advice"
+            }, {
+                author: "@Zuck",
+                message: "I lost 50K"
+            }]
+        }, {
+            postID: "2222222222",
+            author: "@LewisHamilton",
+            uid: "1714271034139127809",
+            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+            message: "Crashing on lap 50, place your bets",
+            timestamp: 1698255874291,
+            comments: []
+        },
+        {
+            postID: "1111111111",
+            author: "@elonmusk",
+            uid: "1714271034139127809",
+            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+            message: "Sold 500k doge to buy 420 @tesla keys",
+            timestamp: 1698255874291,
+            comments: [{
+                author: "@BillGates",
+                message: "Aped"
+            }, {
+                author: "@Zuck",
+                message: "Thanks for the financical advice"
+            }, {
+                author: "@Zuck",
+                message: "I lost 50K"
+            }]
+        }, {
+            postID: "2222222222",
+            author: "@LewisHamilton",
+            uid: "1714271034139127809",
+            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
+            message: "Crashing on lap 50, place your bets",
+            timestamp: 1698255874291,
+            comments: []
+        }
+    ],
     keysPageInfo: {
         currentRange: 0,
         pageSize: 5
     },
     key: {
-        keyBalance: 123,
-        holderNum: 95,
-        priceInETH: 0.0012,
-        totalPrice: 22.062
+        avatar: avatarImg,
+        keyBalance: 0,
+        holderNum: 0,
+        priceInETH: 0,
+        totalPrice: 0
     },
-    keys: [{
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "50"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "51"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "52"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "53"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "54"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "55"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "56"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "57"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "58"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "59"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "60"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "61"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "62"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "63"
-    },
-    {
-        uid: "123412341234",
-        avatar: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-        name: "elonmusk",
-        price: "0.0012",
-        balance: "64"
-    }],
+    keys: [],
     profile: {
         holderNum: "0",
         keyBalance: "0",
@@ -213,7 +183,6 @@ let state = {
 
 let web3: any = null;
 let walletProvider: any = null;
-let chainID: any = null;
 let contract: any = null;
 let currentWalletAddress: string = "";
 let xendContract: any = null;
@@ -250,6 +219,17 @@ const validateMetamaskAddress = (address: string) => {
     }
 }
 
+// @ts-ignore
+async function signMessage(message, provider, signer) {
+    try {
+        const signature = await signer.signMessage(message);
+        return signature;    
+    } catch (error) {
+        console.log("signMessage: ", error);
+        return null;
+    }
+}
+
 const getNormalizeAddress = (accounts: any) => {
     return accounts[0] ? accounts[0].toLowerCase() : null
 }
@@ -280,7 +260,7 @@ const getInPageProvider = () => {
     provider = new MetaMaskInpageProvider(pluginStream);
  } catch (e) {
     console.dir(`Metamask connect error `, e)
-    throw e
+    return null;
   }
   return provider
 }
@@ -296,6 +276,12 @@ const getProvider = () => {
     } else {
         console.log("getInPageProvider");
         const provider = getInPageProvider();
+    
+        if (provider == null) {
+            alert("Please install Metamask");
+            logout();
+            window.open('https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn', '_blank');
+        }
         return provider;
     }
 }
@@ -312,70 +298,104 @@ const getAccounts = async (provider: AnyNaptrRecord) => {
             // @ts-ignore
             provider.request({ method: 'eth_chainId' }),
         ]);
+
         if (chain != chainId) {
-            try {
-                // @ts-ignore
-                const res = await provider.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: `0x${chain.toString(16)}` }],
-                });
-                console.log("success1: ", res);
-            } catch (error) {
-                console.log("request1: ", error);
-                // @ts-ignore
-                if (error.code === 4902) {
-                    try {
-                        // @ts-ignore
-                        const res = provider.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [{
-                                chainId: `0x${chain.toString(16)}`,
-                                rpcUrls: ['https://goerli.infura.io/v3/'],
-                                chainName: 'Goerli test network',
-                                nativeCurrency: {
-                                    name: 'Goerli ETH',
-                                    symbol: 'GoerliETH',
-                                    decimals: 18,
-                                },
-                                blockExplorerUrls: ['https://goerli.etherscan.io'],
-                            }],
-                        });
-                        console.log("success2: ", res);
-                    } catch (error) {
-                        console.error("request2: ", error);
-                    }
-                  } else {
-                    console.error("request3: ", error);
-                  }
+            const result = await switchChain(provider);
+            if (!result) {
+                alert("Please switch to Goerli Testnet.");
+                return [];
             }
         }
         return [accounts, chain];
     }
-    return false;
+    return [];
+}
+
+// @ts-ignore
+const switchChain = async (provider) => {
+    try {
+        // @ts-ignore
+        const res = await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${chain.toString(16)}` }],
+        });
+        const prov = new ethers.providers.Web3Provider(getProvider());
+
+        signer = prov.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
+        xendContract = new ethers.Contract(address, abi, prov);
+        return true;
+    } catch (error) {
+        // @ts-ignore
+        if (error.code === 4902) {
+            try {
+                // @ts-ignore
+                const res = provider.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: `0x${chain.toString(16)}`,
+                        rpcUrls: ['https://goerli.infura.io/v3/'],
+                        chainName: 'Goerli test network',
+                        nativeCurrency: {
+                            name: 'Goerli ETH',
+                            symbol: 'GoerliETH',
+                            decimals: 18,
+                        },
+                        blockExplorerUrls: ['https://goerli.etherscan.io'],
+                    }],
+                });
+                const prov = new ethers.providers.Web3Provider(getProvider());
+
+                signer = prov.getSigner();
+                subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
+                xendContract = new ethers.Contract(address, abi, prov);
+                return true;
+            } catch (error) {
+                console.error("request2: ", error);
+            }
+        } else {
+            console.error("request3: ", error);
+        }
+    }
+    let res: boolean = await switchChain(provider);
+    return res;
 }
 
 const connectWalletFunc = async () => {
-    console.log("connectWallet runs....")
+    let provider = getProvider();
     try {
-        const provider = walletProvider;
         //@ts-ignore
         const [accounts, chainId] = await getAccounts(provider);
         if (accounts && chainId) {
             const account = getNormalizeAddress(accounts);
             
+            if (state.user.address != null) {
+                if (state.user.address.toLowerCase() != account.toLowerCase()) {
+                    alert(`Your Wallet Address Should Be: ${state.user.address}. Please disconnect current active wallet(${account}).`);
+                    return {
+                        result: false
+                    };
+                }
+            }
+            if (chainId != chain) {
+                return {
+                    result: false
+                }
+            }
             web3 = new Web3(provider);
 
             // @ts-ignore
             contract = new web3.eth.Contract(abi, address);
-            chainID = chainId;
 
             return {
                 result: true,
                 address: account
             };
+        } else {
+           alert("Please connect wallet.");
         }
-    } catch (e) {
-        console.log("error while connect", e);
+    } catch (error) {
+        console.log("error while connect", error);
     }
     return {
         result: false
@@ -459,8 +479,9 @@ function injectStyleList() {
     document.getElementsByTagName("head")[0].appendChild(link);
 }
 
-function login() {
+async function login() {
     console.log("login");
+  
     // @ts-ignore
     if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
         // @ts-ignore
@@ -579,10 +600,18 @@ async function connectWallet() {
         ) {
             // @ts-ignore
             document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+            console.log("Connect Wallet->Dashboard Without SignUp");
+            await checkURL(false);
             // @ts-ignore
             document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
         }
     } else {
+        const provider = new ethers.providers.Web3Provider(getProvider());
+
+        signer = provider.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+        xendContract = new ethers.Contract(address, abi, provider);
+
         try {
             const result = await xendContract.connect(signer)["getCreatorSignUpStatus"](currentWalletAddress);
             if (!result) {
@@ -603,6 +632,8 @@ async function connectWallet() {
                 });
                 // @ts-ignore
                 document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+                console.log("Connect Wallet->Dashboard");
+                await checkURL(false);
                 // @ts-ignore
                 document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
             }
@@ -613,17 +644,21 @@ async function connectWallet() {
     }
 }
 
-
-async function successSignup() {
+// @ts-ignore
+async function successSignup(signature, message) {
     port.postMessage({
         task: "setWalletAddr",
         address: currentWalletAddress,
-        uid: state.user.uid
+        uid: state.user.uid,
+        token: state.token,
+        secret: state.secret,
+        signature: signature,
+        message: message
     });
-    port.onMessage.addListener(function(msg: any) {
+    port.onMessage.addListener(async function(msg: any) {
         if (msg.result === "statusWalletSet") {
             console.log("statusWalletSet: ", msg.result);
-            if (msg.result) {
+            if (msg.status) {
                 state.user.address = currentWalletAddress;
                 state.signedUp = true;
 
@@ -639,6 +674,7 @@ async function successSignup() {
                 ) {
                     // @ts-ignore
                     document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+                    await checkURL(false);
                     // @ts-ignore
                     document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
                     return;
@@ -663,10 +699,24 @@ async function signUp() {
 
     // @ts-ignore
     let referrer = document.getElementById("xend-ext-signup-referrer-name").value;
-    console.log("referrer", referrer, chainID);
     
+    const prov = getProvider();
+    const provider = new ethers.providers.Web3Provider(prov);
+
+    signer = provider.getSigner();
+    subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+    xendContract = new ethers.Contract(address, abi, provider);
+
+    let message = `Hello, This is ${state.user.name}`;
+    const signature = await signMessage(message, prov, signer);
+    if (signature == null) {
+        alert("Please Sign.");
+        return;
+    }
+
     if (referrer == "") {
         console.log("referrer1: ", referrer);
+
         try {
             const result = await xendContract.connect(signer)["signUp"]([]);
             console.log(result);
@@ -675,10 +725,24 @@ async function signUp() {
             }
             // @ts-ignore
             result.wait().then(res => {
-                successSignup();
+                successSignup(signature, message);
             });
         } catch (error: any) {
             console.log("signUpError", error.error);
+            if (error.error.message == "execution reverted: User is already signed up") {
+                state.signedUp = true;
+
+                chrome.storage.local.set({
+                    state: state
+            
+                });
+            
+                // @ts-ignore
+                document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+                await checkURL(false);
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";      
+            }
             return;
         }
     } else {
@@ -690,6 +754,7 @@ async function signUp() {
             return;
         }
         console.log("referrer4: ", referrer);
+
         try {
             const result = await xendContract.connect(signer)["signUpWithReferral"](referrer);
             console.log(result);
@@ -698,19 +763,30 @@ async function signUp() {
             }
             // @ts-ignore
             result.wait().then(res => {
-                successSignup();
+                successSignup(signature, message);
             });
         } catch (error: any) {
             console.log("signUpError", error.error);
+            if (error.error.message == "execution reverted: User is already signed up") {
+                state.signedUp = true;
+
+                chrome.storage.local.set({
+                    state: state
+            
+                });
+            
+                // @ts-ignore
+                document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+                await checkURL(false);
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = ""; 
+            }
             return;
         }
     }   
 }
 
 function logout() {
-    state.authorized = false;
-    state.walletConnected = false;
-    state.signedUp = true;
     // @ts-ignore
     if (state.file != "") {
         // @ts-ignore
@@ -724,26 +800,33 @@ function logout() {
     }
 
     chrome.storage.local.set({
-        state: state
+        state: ""
     });
-    if (!state.authorized && !state.walletConnected
-        && document.querySelector('aside[xend="dashboard"]')
-        && document.querySelector('aside[xend="profile"]')
-        && document.querySelector('aside[xend="settings"]')
-        // @ts-ignore
-        && (document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == ""
-            // @ts-ignore
-            || document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display == "")
-    ) {
-        // @ts-ignore
-        document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "";
-    }
+    
+    web3 = null;
+    walletProvider = null;
+    contract = null;
+    currentWalletAddress = "";
+    xendContract = null;
+    subscribeContract = null;
+    signer = null;
+
+    isPendingSubscribe = false;
+    isPendingBuy = false;
+    isPendingSell = false;
+
+    // @ts-ignore
+    document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
+    // @ts-ignore
+    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
+    // @ts-ignore
+    document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+    // @ts-ignore
+    document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+    // @ts-ignore
+    document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+    // @ts-ignore
+    document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "";
 }
 
 function createCommentsForm(container: any, postID: any, comments: any) {
@@ -973,7 +1056,7 @@ function createLogin(node: any) {
 }
 
 function createWalletConnect(node: any) {
-    console.log("createWaleltConnect");
+    console.log("createWalletConnect");
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
     // @ts-ignore
@@ -1262,17 +1345,19 @@ function createDashboard(node: any) {
         let last = state.keys.length > (state.keysPageInfo.pageSize + state.keysPageInfo.currentRange) ? state.keysPageInfo.pageSize : state.keys.length - state.keysPageInfo.currentRange;
         for (let i = 0; i < last; i++) {
             keys.push({
+                // @ts-ignore
                 ...state.keys[state.keysPageInfo.currentRange + i]
             });
         }
-        const item = getKeys(container, { avatar: state.user.avatar, ...state.key, keys });
+        let data = { ...state.key, keys };
+        data.avatar = state.user.avatar;
+        const item = getKeys(container, data);
 
         // @ts-ignore
         document.getElementById("content-2").innerHTML = item;
 
         // @ts-ignore
         document.getElementById("xend-ext-dashboard-row-container").addEventListener("scroll", e => {
-            console.log("---");
             if (!state.loadingArticles && document.querySelector("#xend-ext-keys-loader")
                 // @ts-ignore
                 && (document.querySelector("#xend-ext-keys-loader").offsetTop <
@@ -1291,9 +1376,8 @@ function createDashboard(node: any) {
                 console.log(numOfKeys, scrollTop);
 
                 for (let i = numOfKeys; i < state.keys.length; i++) {
-                    keys.push({
-                        ...state.keys[i]
-                    });
+                    // @ts-ignore
+                    keys.push({ ...state.keys[i] });
                     if (keys.length == state.keysPageInfo.pageSize) {
                         break;
                     }
@@ -1311,6 +1395,60 @@ function createDashboard(node: any) {
                 state.loadingArticles = false;
             }
         });
+    }
+
+    const updateSettingsPage = async () => {
+        try {
+            const provider = new ethers.providers.Web3Provider(getProvider());
+    
+            signer = provider.getSigner();
+            subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+            xendContract = new ethers.Contract(address, abi, provider);
+    
+            const isEnabled = await subscribeContract.connect(signer)["isMonthlySubscriptionEnabled"](state.user.address);
+            console.log("updateSettingsPage", isEnabled);
+            state.user.isSubscriptionEnabled = isEnabled;
+    
+            port.postMessage({
+                task: "getCompatibility",
+                uid: state.user.uid,
+                token: state.token,
+                secret: state.secret
+            });
+
+            port.onMessage.addListener(function(msg) {
+                if (msg.result === "successGetCompatibility") {
+                    console.log("successGetCompatibility: ", msg.isCompatibility);
+                    // @ts-ignore
+                    document.getElementById("xendExtFriendTechCheckbox").checked = msg.isCompatibility;
+
+                    state.user.isCompatibility = msg.isCompatibility;
+
+                    chrome.storage.local.set({
+                        state: state
+                    });
+        
+                    // @ts-ignore
+                    document.getElementById("xendExtSettingsPrice").text = `${state.user.subscribePriceInETH} ETH`;
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionPrice").value = state.user.subscribePriceInETH;
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionCheckbox").checked = isEnabled;
+        
+                    if (isEnabled) {
+                        // @ts-ignore
+                        document.getElementById("xendExtSubscriptionCheckbox").disabled = true;
+                    }
+        
+                    // @ts-ignore
+                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
+                    // @ts-ignore
+                    document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+                }
+            });
+        } catch (error: any) {
+            console.log("updateSettingsPage", error);
+        }
     }
 
     const updateProfilePage = () => {
@@ -1429,11 +1567,8 @@ function createDashboard(node: any) {
     });
 
     // @ts-ignore
-    container.querySelector("#xend-ext-dashboard-settings-btn").addEventListener("click", e => {
-        // @ts-ignore
-        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+    container.querySelector("#xend-ext-dashboard-settings-btn").addEventListener("click", async (e) => {
+        await updateSettingsPage();
     });
 
     // @ts-ignore
@@ -1563,14 +1698,6 @@ function createDashboard(node: any) {
                 chrome.storage.local.set({
                     state: state
                 });
-    
-                // @ts-ignore
-                if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
-                    // @ts-ignore
-                    document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
-                    // @ts-ignore
-                    document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
-                }
             }
         });
     });
@@ -1655,8 +1782,8 @@ const createProfileMenu = (node: any) => {
     const pageTpl = `
     <div class="xend-ext-menu-header">
         <div class="xend-ext-menu-header-userinfo">
-            <img id="xend-ext-menu-avatar" class="xend-ext-dashboard-keys-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
-            <div id="xend-ext-menu-user" class="xend-ext-menu-user">@${state.user.name}</div>
+            <img id="xend-ext-menu-avatar" class="xend-ext-dashboard-keys-logo" src="${state.profile.keyAvatar}" alt="avatar" draggable="false" />
+            <div id="xend-ext-menu-user" class="xend-ext-menu-user">@${state.profile.keyOwnerName}</div>
         </div>
         <div id="xend-ext-menu-value">
             <div id="xend-ext-menu-ethprice">0</div>
@@ -1689,19 +1816,19 @@ const createProfileMenu = (node: any) => {
                 <input type="number" value="0" id="xend-ext-menu-key-input" />
                 <div id="xend-ext-menu-key-price">0</div>
             </div>
-            <button id="xend-ext-menu-key-buy">
-            Buy
+            <button id="xend-ext-menu-key-buy" class="spinner-button">
+                <span class="spinner-button-text">Buy</span>
             </button>
-            <button id="xend-ext-menu-key-sell">
-            Sell
+            <button id="xend-ext-menu-key-sell" class="spinner-button">
+                <span class="spinner-button-text">Sell</span>
             </button>
         </div>
         Premium Content
         <div id="xend-ext-menu-premium" class="xend-ext-menu-premium">
         Hold <em>1 keys</em> or <em>subscribe</em> to unlock. Friend.tech supported.
         </div>
-        <button id="xend-ext-menu-premium-btn">
-            1 Month • 1 ETH
+        <button id="xend-ext-menu-premium-btn" class="spinner-button">
+            <span id="xend-ext-menu-premium-btn-text" class="spinner-button-text">1 Month • 1 ETH</span>
         </button>
         </div>
     </div>
@@ -1724,9 +1851,7 @@ function createSettings(node: any) {
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
     node.style.height = '425px';
-    if (!state.authorized || !state.walletConnected || !state.signedUp) {
-        node.style.display = 'none';
-    }
+    node.style.display = 'none';
     node.getElementsByTagName('aside')[0].setAttribute('xend', 'settings');
     if (node.getElementsByTagName('span')[0]) {
         node.getElementsByTagName('span')[0].remove();
@@ -1757,49 +1882,42 @@ function createSettings(node: any) {
         </div>
     </div>
     <div id="xendExtSettingsList" class="xend-ext-settings-content">
-        <div id="xendExtSettingsContent" class="xend-ext-settings-row">
-          <div class="xend-ext-settings-column-left"> 
-            <div class="xend-ext-settings-title">Content lock</div>
-            Minimum keys required to view your content.
-          </div><div class="xend-ext-settings-column-right">2</div>
-          <div style="clear: both"></div>
-        </div>
         <div id="xendExtSettingsSubscriptions" class="xend-ext-settings-row">
           <div class="xend-ext-settings-column-left"> 
             <div class="xend-ext-settings-title">Subscriptions</div>
             Allow users to unlock your content for a monthly fee.
-          </div><div class="xend-ext-settings-column-right">0.4 ETH</div>
+          </div><div id="xendExtSettingsPrice" class="xend-ext-settings-column-right">${state.user.subscribePriceInETH} ETH</div>
           <div style="clear: both"></div>
         </div>
         <div id="xendExtSettingsFriend" class="xend-ext-settings-row">
           <div class="xend-ext-settings-column-left"> 
             <div class="xend-ext-settings-title">Friend.Tech compatibility</div>
             Allow Friend.Tech keyholders to view your content. Minimum keys amount from content lock applies.
-          </div><div class="xend-ext-settings-column-right">On</div>
-          <div style="clear: both"></div>
-        </div>
-        <div id="xendExtSettingsDelete" class="xend-ext-settings-row">
-          <div class="xend-ext-settings-column-left"> 
-            <div class="xend-ext-settings-title">Delete all my data</div>
-            Your account will still be tied to the same ETH address.
-          </div><div class="xend-ext-settings-column-right">&nbsp;</div>
+          </div><input id="xendExtFriendTechCheckbox" type="checkbox" checked /><label for="xendExtFriendTechCheckbox"></label>
           <div style="clear: both"></div>
         </div>
     </div>
-    <div id="xendExtSettingsDetail" style="display: none">
-        <div id="xendExtSettingsDetailBack">Back</div>
-        <div class="xend-ext-settings-detail-left">
-            <div class="xend-ext-settings-detail-title"></div>
-            <div class="xend-ext-settings-detail-form">
-                <input type="text" value="0.2" />
+    <div id="xendExtSubscriptionDetail" style="display: none">
+        <div id="xendExtSubscriptionDetailBack">Back</div>
+        <div class="xend-ext-subscription-title">Subscriptions</div>
+        <div class="xend-ext-subscription-detail">Allow users to unlock your content for a monthly fee.<div>
+        </div>
+        <div class="xend-ext-subscription-row">
+            <div class="xend-ext-subscription-column-left">
+                <div class="xend-ext-settings-subscription-form">
+                    <input type="number" id="xendExtSubscriptionPrice" value=${state.user.subscribePriceInETH} />
+                </div>
             </div>
-        </div><div class="xend-ext-settings-detail-right">
-        <input id="xendExtSubscriptionCheckbox" type="checkbox" checked /><label for="xendExtSubscriptionCheckbox"></label>
-        <button id="xendExtSubscriptionUpdate">Update</button>
+            <div class="xend-ext-subscription-column-right">
+                <input id="xendExtSubscriptionCheckbox" type="checkbox" /><label for="xendExtSubscriptionCheckbox"></label>
+            </div>
+        </div>
+        <div class="xend-ext-subscription-apply">
+            <button id="xendExtSubscriptionUpdate" class="spinner-button">
+                <span class="spinner-button-text">Apply</span>
+            </button>
         </div>
     </div>
-    
-  
     `;
     container.innerHTML = pageTpl;
 
@@ -1808,35 +1926,150 @@ function createSettings(node: any) {
     aside.getElementsByTagName('div')[0].appendChild(container);
 
     // @ts-ignore
-    container.querySelectorAll(".xend-ext-settings-row").forEach(el => {
-        el.addEventListener("click", e => {
+    container.querySelector("#xendExtSettingsSubscriptions").addEventListener("click", e => {
             // @ts-ignore
             container.querySelector("#xendExtSettingsList").style.display = "none";
             // @ts-ignore
-            container.querySelector(".xend-ext-settings-detail-title").innerHTML =
-                // @ts-ignore
-                el.querySelector(".xend-ext-settings-column-left").innerHTML.replace("xend-ext-settings-title", "");
+            container.querySelector("#xendExtSubscriptionDetail").style.display = "block";
             // @ts-ignore
-            container.querySelector("#xendExtSettingsDetail").style.display = "block";
-
-            if (el.id == "xendExtSettingsSubscriptions") {
-                // @ts-ignore
-                container.querySelector(".xend-ext-settings-detail-right").style.visibility = "visible";
-                // @ts-ignore
-                container.querySelector(".xend-ext-settings-detail-form").style.visibility = "visible";
-            } else {
-                // @ts-ignore
-                container.querySelector(".xend-ext-settings-detail-right").style.visibility = "hidden";
-                // @ts-ignore
-                container.querySelector(".xend-ext-settings-detail-form").style.visibility = "hidden";
-            }
-
-        }, false);
+            container.querySelector(".xend-ext-settings-detail-right").style.visibility = "visible";
+            // @ts-ignore
+            container.querySelector(".xend-ext-settings-subscription-form").style.visibility = "visible";
     });
     // @ts-ignore
-    container.querySelector("#xendExtSettingsDetailBack").addEventListener("click", e => {
+    container.querySelector("#xendExtFriendTechCheckbox").addEventListener("change", async (e: any) => {
         // @ts-ignore
-        container.querySelector("#xendExtSettingsDetail").style.display = "none";
+        port.postMessage({
+            task: "setFriendTechCompatibility",
+            isCompatible: e.target.checked,
+            uid: state.user.uid,
+            token: state.token,
+            secret: state.secret
+        });
+        // @ts-ignore
+        port.onMessage.addListener(async function(msg: any) {
+            if (msg.result === "successSetCompatibility") {
+                if (msg.status) {
+                    state.user.isCompatibility = e.target.checked;
+                    chrome.storage.local.set({ state });
+                    alert("success");
+                }
+            }
+        });
+    });
+    // @ts-ignore
+    container.querySelector("#xendExtSubscriptionUpdate").addEventListener("click", async (e) => {
+        isPendingUpdatePrice = true;
+        // @ts-ignore
+        document.getElementById("xendExtSubscriptionUpdate").classList.add("spinner-button-loading");
+        // @ts-ignore
+        document.getElementById("xendExtSubscriptionUpdate").disabled = true;
+
+        // @ts-ignore
+        let price = document.getElementById("xendExtSubscriptionPrice").value;
+        if (price < 0 && price > 100) {
+            isPendingUpdatePrice = false;
+            // @ts-ignore
+            document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+            // @ts-ignore
+            document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+            alert("Please input positive value less than 100ETH.");
+            return;
+        }
+
+        price = Web3.utils.toWei(price, "ether");
+        const provider = new ethers.providers.Web3Provider(getProvider());
+
+        signer = provider.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+        xendContract = new ethers.Contract(address, abi, provider);
+        
+        if (state.user.isSubscriptionEnabled) {
+            try {
+                const result = await subscribeContract.connect(signer)["editMonthlySubPrice"](price);
+                if (!result.hash) {
+                    isPendingUpdatePrice = false;
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+                    alert("Transaction Failed.");
+                    return;
+                }
+                // @ts-ignore
+                result.wait().then(res => {
+                    isPendingUpdatePrice = false;
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+                    if (res.status) {
+                        alert("Transaction Succeed.");
+                    } else {
+                        alert("Transaction Failed.");
+                    }
+                });
+            } catch (error) {
+                console.log("SubscriptionPrice: ", error);
+                isPendingUpdatePrice = false;
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+                alert("Transaction Failed.");
+            }
+        } else {
+            // @ts-ignore
+            const isChecked = document.getElementById("xendExtSubscriptionCheckbox").checked;
+            if (!isChecked) {
+                isPendingUpdatePrice = false;
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+                return;
+            }
+            try {
+                const result = await subscribeContract.connect(signer)["enableMonthlySubscriptions"](price);
+                if (!result.hash) {
+                    isPendingUpdatePrice = false;
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+                    alert("Transaction Failed.");
+                    return;
+                }
+                // @ts-ignore
+                result.wait().then(res => {
+                    isPendingUpdatePrice = false;
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xendExtSubscriptionCheckbox").disabled = true;                    
+                    if (res.status) {
+                        alert("Transaction Succeed.");
+                    } else {
+                        alert("Transaction Failed.");
+                    }
+                });
+            } catch (error) {
+                console.log("SubscriptionPrice: ", error);
+                isPendingUpdatePrice = false;
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+                alert("Transaction Failed.");
+            }
+        }
+    });
+    // @ts-ignore
+    container.querySelector("#xendExtSubscriptionDetailBack").addEventListener("click", e => {
+        // @ts-ignore
+        container.querySelector("#xendExtSubscriptionDetail").style.display = "none";
         // @ts-ignore
         container.querySelector("#xendExtSettingsList").style.display = "block";
     }, false);
@@ -1873,6 +2106,10 @@ const updateBuySellPage = async () => {
     // @ts-ignore
     document.getElementById("xend-ext-menu-usdprice").innerHTML = usdprice;
     // @ts-ignore
+    document.getElementById("xend-ext-menu-avatar").src = state.profile.keyAvatar;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-user").innerHTML = state.profile.keyOwnerName;
+    // @ts-ignore
     document.getElementById("xend-ext-menu-sharesbalance").innerHTML = state.profile.myKeyBalance;
     // @ts-ignore
     document.getElementById("xend-ext-menu-holdernum").innerHTML = state.profile.holderNum;
@@ -1888,6 +2125,12 @@ const updateBuySellPage = async () => {
     });
 
     try {
+        const provider = new ethers.providers.Web3Provider(getProvider());
+
+        signer = provider.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+        xendContract = new ethers.Contract(address, abi, provider);
+
         const isEnabled = await subscribeContract.connect(signer)["isMonthlySubscriptionEnabled"](state.profile.keyAddress);
         console.log("subscribe", isEnabled);
         state.profile.isSubscriptionEnabled = isEnabled;
@@ -1895,24 +2138,41 @@ const updateBuySellPage = async () => {
         if (isEnabled && state.user.address != state.profile.keyAddress && !state.profile.isSubscribed) {
             const result = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
             state.profile.subscribePriceInETH = result;
-            console.log("subscribe", result);
+            console.log("subscribePrice", result);
+
             // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn").text = `1 Month • ${state.profile.subscribePriceInETH} ETH`;
+            document.getElementById("xend-ext-menu-premium-btn-text").innerHTML = `1 Month • ${state.profile.subscribePriceInETH} ETH`;
         } else {
             // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn").text = `Subscription Disabled`;
+            document.getElementById("xend-ext-menu-premium-btn-text").innerHTML = `Disabled`;
             // @ts-ignore
             document.getElementById("xend-ext-menu-premium-btn").disabled = true;
             // @ts-ignore
             document.getElementById("xend-ext-menu-premium").style.opacity = "50% !important";                        
         }
+
+        chrome.storage.local.set({ state });
     } catch (error: any) {
         console.log("updateBuySellPage", error);
     }
 
-    document.getElementById("xend-ext-menu-premium-btn")?.addEventListener("click", async (e: any) => {
-        console.log("start subscribe");
-        
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-premium-btn").addEventListener("click", async (e: any) => {
+        if (isPendingSubscribe) {
+            return;
+        }
+        isPendingSubscribe = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-premium-btn").disabled = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-premium-btn").classList.add("spinner-button-loading");
+
+        const provider = new ethers.providers.Web3Provider(getProvider());
+
+        signer = provider.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+        xendContract = new ethers.Contract(address, abi, provider);
+
         try {
             const price = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
             const result = await subscribeContract.connect(signer)["subscribe"](state.profile.keyAddress, {
@@ -1920,30 +2180,72 @@ const updateBuySellPage = async () => {
             });
 
             if (!result.hash) {
+                isPendingSubscribe = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+                alert("Transaction Failed.");
                 return;
             }
             // @ts-ignore
             result.wait().then(res => {
                 if (res.status) {
+                    isPendingSubscribe = false;
                     // @ts-ignore
-                    document.getElementById("xend-ext-menu-premium-btn").text = "Subscribed";
+                    document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn-text").text = "Subscribed";
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
                 } else {
+                    isPendingSubscribe = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
                     alert("Transaction Failed");
                 }
             });
         } catch (error) {
-            console.log("subscribe", error);
+            console.log("subscribeError", error);
+            isPendingSubscribe = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+            alert("Transaction Failed");
         }
     });
 
-    document.getElementById("xend-ext-menu-key-buy")?.addEventListener("click", async (e: any) => {
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-key-buy").addEventListener("click", async (e: any) => {
+        if (isPendingBuy && isPendingSell) {
+            return;
+        }
+        isPendingBuy = true;
         // @ts-ignore
-        let amt = (document.getElementById("xend-ext-menu-key-input")?.value) * 1;
+        document.getElementById("xend-ext-menu-key-buy").disabled = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
+        // @ts-ignore
+        let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
 
         if (amt <= 0) {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+            isPendingBuy = false;
             alert("Please input positive value.");
             return;
         }
+
+        const prov = new ethers.providers.Web3Provider(getProvider());
+
+        signer = prov.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
+        xendContract = new ethers.Contract(address, abi, prov);
 
         try {
             let price = await xendContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
@@ -1953,6 +2255,11 @@ const updateBuySellPage = async () => {
             });
 
             if (!result.hash) {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                isPendingBuy = false;
                 alert("Transaction Failed.");
                 return;
             }
@@ -1961,28 +2268,63 @@ const updateBuySellPage = async () => {
                 console.log(res);
                 // @ts-ignore
                 if (res.status == 1) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    isPendingBuy = false;
                     alert("Transaction Succeed.");
                     setTimeout(() => {
                         checkURL(false);
                     }, 1000);
                 } else {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    isPendingBuy = false;
                     alert("Transaction Failed.");
                 }
             });
         } catch (error) {
             console.log("buyKey", error);
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+            isPendingBuy = false;
             alert("Transaction Failed.");
         }
     });
 
-    document.getElementById("xend-ext-menu-key-sell")?.addEventListener("click", async (e: any) => {
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-key-sell").addEventListener("click", async (e: any) => {
+        if (isPendingSell && isPendingBuy) {
+            return;
+        }
+        isPendingSell = true;
         // @ts-ignore
-        let amt = (document.getElementById("xend-ext-menu-key-input")?.value) * 1;
+        document.getElementById("xend-ext-menu-key-sell").disabled = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
+        // @ts-ignore
+        let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
 
         if (amt <= 0) {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+            isPendingSell = false;
             alert("Please input positive value.");
             return;
         }
+
+        const prov = new ethers.providers.Web3Provider(getProvider());
+
+        signer = prov.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
+        xendContract = new ethers.Contract(address, abi, prov);
 
         try {
             let price = await xendContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
@@ -1992,6 +2334,11 @@ const updateBuySellPage = async () => {
             });
 
             if (!result.hash) {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                isPendingSell = false;
                 alert("Transaction Failed.");
                 return;
             }
@@ -2000,16 +2347,31 @@ const updateBuySellPage = async () => {
                 console.log(res);
                 // @ts-ignore
                 if (res.status == 1) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    isPendingSell = false;
                     alert("Transaction Succeed.");
                     setTimeout(() => {
                         checkURL(false);
                     }, 1000);
                 } else {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    isPendingSell = false;
                     alert("Transaction Failed.");
                 }
             });
         } catch (error) {
-            console.log("buyKey", error);
+            console.log("sellKey", error);
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+            isPendingSell = false;
             alert("Transaction Failed.");
         }
     });
@@ -2020,11 +2382,14 @@ const updateBuySellPage = async () => {
 }
 
 const checkURL = async (isStart: boolean) => {
+    console.log("checkURL", isStart);
     if (isStart) {
         // @ts-ignore
         document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
         // @ts-ignore
         document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
     }
 
     let path = window.location.href;
@@ -2044,7 +2409,7 @@ const checkURL = async (isStart: boolean) => {
             console.log("successGetKeyInfo", msg.data);
             if (msg.data.result == "error") {
                 // @ts-ignore
-                document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
             } else {
                 state.profile.holderNum = msg.data.data.holderNum;
                 state.profile.keyBalance = msg.data.data.keyBalance;
@@ -2063,10 +2428,12 @@ const checkURL = async (isStart: boolean) => {
 
                 await updateBuySellPage();
 
-                // @ts-ignore
-                document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
-                // @ts-ignore
-                document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+                if (state.walletConnected && state.authorized && state.signedUp) {
+                    // @ts-ignore
+                    document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
+                    // @ts-ignore
+                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+                }
             }
         }
     });
@@ -2076,17 +2443,19 @@ const onMutation = async (mutations: MutationRecord[]) => {
     for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
             const nodes = traverseAndFindAttribute(node, 'aside');
+            console.log("=== start ===");
             // @ts-ignore
             nodes.forEach((n: any) => {
                 const sidebar = n.parentElement.parentElement.parentElement;
 
-                getState(() => {
+                getState(async () => {
+                    console.log("=== Get State ===");
                     if (!document.getElementById("xendExtStyleList")) {
                         injectStyleList();
                     }
-                    walletProvider = getProvider();
-                    
-                    const provider = new ethers.providers.Web3Provider(walletProvider);
+
+                    const provider = new ethers.providers.Web3Provider(getProvider());
+
                     signer = provider.getSigner();
                     subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
                     xendContract = new ethers.Contract(address, abi, provider);
@@ -2153,8 +2522,23 @@ const observe2 = () => {
 };
 observe2();
 
-const clearState = () => {
-    chrome.storage.local.set({state: ""});
-}
-
-// clearState();
+walletProvider = getProvider();
+// @ts-ignore
+walletProvider.on('accountsChanged', async function (accounts) {
+    // Time to reload your interface with accounts[0]!
+    if (accounts[0] == null) {
+        logout();
+    }
+})
+// @ts-ignore
+walletProvider.on('connect', async function (connectInfo) {
+    // Time to reload your interface with the new networkId
+    let chainId = parseInt(connectInfo.chainId, 16);
+    console.log(chainId);
+    if (chainId != chain) {
+        let res = await switchChain(walletProvider);
+        if (!res) {
+            logout();
+        }
+    }
+})

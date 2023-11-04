@@ -460,6 +460,48 @@ div#xend-ext-menu-value div {
     margin-bottom: 20px;
     display: flex;
 }
+
+.spinner-button {
+    position: relative;
+    cursor: pointer;
+}
+
+.spinner-button-text {
+    transition: all 0.2s;
+}
+
+.spinner-button-loading .spinner-button-text {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.spinner-button-loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    border: 4px solid transparent;
+    border-top-color: #ffffff;
+    border-left-color: #ffffff;
+    border-right-color: #ffffff;
+    border-radius: 50%;
+    animation: spinner-button-loading-spinner 1s ease infinite;
+}
+
+@keyframes spinner-button-loading-spinner {
+    from {
+        transform: rotate(0turn);
+    }
+
+    to {
+        transform: rotate(1turn);
+    }
+}
 .xend-ext-menu-key-value,
 #xend-ext-menu-key-buy,
 #xend-ext-menu-key-sell {
@@ -682,6 +724,26 @@ button#xend-ext-logout {
     color: var(--xendmaincolor);
     vertical-align: middle;
 }
+.xend-ext-subscription-column-left {
+    position: relative;
+    display: inline-block;
+    width: calc(100% - 84px);
+    font-size: 14px;
+    color: var(--xendsecondcolor);
+    vertical-align: middle;
+}
+.xend-ext-subscription-column-right {
+    position: relative;
+    display: inline-block;
+    width: 84px;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding-right: 20px;
+    text-align: right;
+    font-size: 14px;
+    color: var(--xendmaincolor);
+    vertical-align: middle;
+}
 .xend-ext-settings-column-right:after {
     content: '';
     position: absolute;
@@ -706,16 +768,16 @@ button#xend-ext-logout {
 .xend-ext-settings-title:before {
     content: '';
     position: absolute;
-    -webkit-mask: url(/static/img/lock.png) center no-repeat;
+    /* -webkit-mask: url(/static/img/lock.png) center no-repeat; */
     -webkit-mask-size: 10px;
-    background: var(--xendsecondcolor);
+    background: #00ADEB;
     width: 12px;
     height: 14px;
     top: 1px;
     left: 0;
 }
 #xendExtSettingsSubscriptions .xend-ext-settings-title:before {
-    -webkit-mask: url(/static/img/chain.png) center no-repeat;
+    -webkit-mask: url(/static/img/dollar.png) center no-repeat;
     -webkit-mask-size: 14px;
     width: 14px;
     height: 14px;
@@ -723,7 +785,7 @@ button#xend-ext-logout {
     left: 0;
 }
 #xendExtSettingsFriend .xend-ext-settings-title:before {
-    -webkit-mask: url(/static/img/chain.png) center no-repeat;
+    -webkit-mask: url(/static/img/friend-tech.png) center no-repeat;
     -webkit-mask-size: 14px;
     width: 14px;
     height: 14px;
@@ -738,7 +800,7 @@ button#xend-ext-logout {
     top: 1px;
     left: 0;
 }
-#xendExtSettingsDetailBack {
+#xendExtSubscriptionDetailBack {
     position: relative;
     font-size: 20px;
     font-weight: bold;
@@ -748,7 +810,7 @@ button#xend-ext-logout {
     margin-top: -15px;
     cursor: pointer;
 }
-#xendExtSettingsDetailBack:before {
+#xendExtSubscriptionDetailBack:before {
     content: '';
     position: absolute;
     -webkit-mask: url(/static/img/chevron.png) center no-repeat;
@@ -759,6 +821,29 @@ button#xend-ext-logout {
     top: 4px;
     left: 0;
     transform: rotateY(180deg);
+}
+.xend-ext-subscription-title {
+    position: relative;
+    width: 100%;
+    font-size: 19px;
+    font-weight: bold;
+    line-height: 22.67px;
+    color: var(--xendmaincolor);
+    padding-left: 20px;
+}
+.xend-ext-subscription-detail {
+    position: relative;
+    width: 100%;
+    font-size: 14px;
+    line-height: 16.71px;
+    font-weight: 510;
+    color: var(--xendsecondcolor);
+    padding-left: 20px;
+}
+#xendExtSubscriptionDetail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 .xend-ext-settings-detail-title {
     font-size: 14px;
@@ -811,6 +896,37 @@ button#xend-ext-logout {
     left: auto;
     right: 4px;
 }
+#xendExtFriendTechCheckbox~label {
+    position: relative;
+    display: inline-block;
+    border: none;
+    border-radius: 14px;
+    width: 50px;
+    height: 28px;
+    background-color: var(--xendsecondcolor);
+    margin-bottom: -10px;
+    vertical-align: middle;
+}
+#xendExtFriendTechCheckbox {
+    visibility: hidden;
+}
+#xendExtFriendTechCheckbox~label:after {
+    content: '';
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    position: absolute;
+    background-color: var(--xendbuttonwhite);
+    top: 3px;
+    left: 4px;
+}
+#xendExtFriendTechCheckbox:checked~label {
+    background-color: var(--xendlinkcolor);
+}
+#xendExtFriendTechCheckbox:checked~label:after {
+    left: auto;
+    right: 4px;
+}
 #xendExtSubscriptionUpdate {
     color: var(--xendbuttonwhite);
     font-size: 15px;
@@ -822,11 +938,11 @@ button#xend-ext-logout {
     cursor: pointer;
     margin-top: 40px;
 }
-.xend-ext-settings-detail-form {
+.xend-ext-settings-subscription-form {
     position: relative;
     margin-top: 20px;
 }
-.xend-ext-settings-detail-form input {
+.xend-ext-settings-subscription-form input {
     position: relative;
     display: inline-block;
     width: 100%;
@@ -840,7 +956,7 @@ button#xend-ext-logout {
     padding: 1px 2px 5px 2px;
     outline: none;
 }
-.xend-ext-settings-detail-form:before {
+.xend-ext-settings-subscription-form:before {
     content: 'ETH';
     font-size: 20px;
     font-weight: bold;
@@ -848,6 +964,26 @@ button#xend-ext-logout {
     left: 0;
     top: 0;
     color: var(--xendsecondcolor);
+}
+.xend-ext-subscription-title {
+    width: 100%;
+    text-align: start;
+}
+.xend-ext-subscription-title {
+    width: 100%;
+    text-align: start;
+}
+.xend-ext-subscription-row {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+.xend-ext-subscription-apply {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    margin-right: 40px;
 }
 /* comments section */
 .xend-ext-view-comments {
@@ -953,7 +1089,7 @@ img.xend-ext-comments-avatar {
     text-decoration: none;
     /*padding: 6px 10px;*/
     text-align: center;
-    margin: 0 6px;
+    margin: 0 0px;
 }
 
 .tabs__links>a:hover {

@@ -20,18 +20,20 @@
   "permissions": [
     "identity",
     "storage",
-    "declarativeNetRequest",
     "activeTab",
     "runtime",
     "tabs",
-    "https://api.twitter.com/*"
+    "https://api.twitter.com/*",
+    "webNavigation"
   ],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "content_scripts": [{
     "js": [ 
       "static/js/content.js"
     ],
     "matches": [ 
-      "<all_urls>"
+      "https://twitter.com/*",
+      "https://x.com/*"
     ]
  }],
   "web_accessible_resources": [
@@ -59,10 +61,15 @@
         "static/img/chain.png",
         "static/img/trash.png",
         "static/img/chevron.png",
+        "static/img/dollar.png",
+        "static/img/friend-tech.png",
         "logo128.png",
         "static/css/style.css"
       ],
-      "matches": [ "https://twitter.com/*" ]
+      "matches": [ 
+        "https://twitter.com/*", 
+        "https://x.com/*" 
+      ]
     }
   ],
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw6T9bYCWO8JJs/1sbmesZXHsvzeaj3Ik6hI5NTuWbDvATFINeppOdxUDvCuhjG1WWFOC+3PC9Vf9N8yl9m3fwTxB5VvWRzYMOHiFwuD+Jc6JFDrxhUlad0L9A0jp0Xak80uGqiXWMPmc/AYMwQNZBkDaO2eSkY0oBLpkBL1+JJA+M/Xwp42pRvoGwmUTBC2V4FJsM+dbcAv2VSEvrvGJoY8VWJ0+n+GB91NgWzikl65/vC/7iet2bGNOw8csnCGdDtL3gPU0Z9uouXdDBfJnf+FikPsoi9QFcYxL2aOJS1RPXFleUA/h+7OFfS45iq/qBTvA3CDwSz5I+UKbJm2SaQIDAQAB"
