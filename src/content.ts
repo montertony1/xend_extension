@@ -3,7 +3,16 @@ import Web3 from 'web3';
 import { ethers } from "ethers";
 import { MetaMaskInpageProvider } from '@metamask/inpage-provider';
 import PortDuplexStream from 'extension-port-stream';
-import { abi, address, subscribeAddress, subscribeABI, chain } from "./config";
+import { 
+    abi, 
+    address, 
+    subscribeAddress, 
+    subscribeABI, 
+    chain, 
+    friendTechABI, 
+    friendTechAddress, 
+    friendTechChain 
+} from "./config";
 import axios from "axios";
 
 // @ts-ignore
@@ -32,6 +41,7 @@ let state = {
     secret: null,
     file: null,
     loadingArticles: false,
+    loadingFeeds: false,
     loadingKeys: false,
     user: {
         address: "",
@@ -44,114 +54,12 @@ let state = {
         subscribePriceInETH: "0",
         isCompatibility: false,
         pageSize: 2,
-        articles: []
+        articles: [],
+        feedCount: 0,
+        currentFeedIDX: 0,
+        feedPageSize: 4,
     },
-    feed: [
-        {
-            postID: "1111111111",
-            author: "@elonmusk",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Sold 500k doge to buy 420 @tesla keys",
-            timestamp: 1698255874291,
-            comments: [{
-                author: "@BillGates",
-                message: "Aped"
-            }, {
-                author: "@Zuck",
-                message: "Thanks for the financical advice"
-            }, {
-                author: "@Zuck",
-                message: "I lost 50K"
-            }]
-        }, {
-            postID: "2222222222",
-            author: "@LewisHamilton",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Crashing on lap 50, place your bets",
-            timestamp: 1698255874291,
-            comments: []
-        },
-        {
-            postID: "1111111111",
-            author: "@elonmusk",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Sold 500k doge to buy 420 @tesla keys",
-            timestamp: 1698255874291,
-            comments: [{
-                author: "@BillGates",
-                message: "Aped"
-            }, {
-                author: "@Zuck",
-                message: "Thanks for the financical advice"
-            }, {
-                author: "@Zuck",
-                message: "I lost 50K"
-            }]
-        }, {
-            postID: "2222222222",
-            author: "@LewisHamilton",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Crashing on lap 50, place your bets",
-            timestamp: 1698255874291,
-            comments: []
-        },
-        {
-            postID: "1111111111",
-            author: "@elonmusk",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Sold 500k doge to buy 420 @tesla keys",
-            timestamp: 1698255874291,
-            comments: [{
-                author: "@BillGates",
-                message: "Aped"
-            }, {
-                author: "@Zuck",
-                message: "Thanks for the financical advice"
-            }, {
-                author: "@Zuck",
-                message: "I lost 50K"
-            }]
-        }, {
-            postID: "2222222222",
-            author: "@LewisHamilton",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Crashing on lap 50, place your bets",
-            timestamp: 1698255874291,
-            comments: []
-        },
-        {
-            postID: "1111111111",
-            author: "@elonmusk",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Sold 500k doge to buy 420 @tesla keys",
-            timestamp: 1698255874291,
-            comments: [{
-                author: "@BillGates",
-                message: "Aped"
-            }, {
-                author: "@Zuck",
-                message: "Thanks for the financical advice"
-            }, {
-                author: "@Zuck",
-                message: "I lost 50K"
-            }]
-        }, {
-            postID: "2222222222",
-            author: "@LewisHamilton",
-            uid: "1714271034139127809",
-            imageUrl: "https://pbs.twimg.com/profile_images/1715151701911420928/OrdjW-eg_400x400.jpg",
-            message: "Crashing on lap 50, place your bets",
-            timestamp: 1698255874291,
-            comments: []
-        }
-    ],
+    feed: [],
     keysPageInfo: {
         currentRange: 0,
         pageSize: 5
@@ -361,47 +269,6 @@ const switchChain = async (provider) => {
     return res;
 }
 
-const connectWalletFunc = async () => {
-    let provider = getProvider();
-    try {
-        //@ts-ignore
-        const [accounts, chainId] = await getAccounts(provider);
-        if (accounts && chainId) {
-            const account = getNormalizeAddress(accounts);
-            
-            if (state.user.address != null) {
-                if (state.user.address.toLowerCase() != account.toLowerCase()) {
-                    alert(`Your Wallet Address Should Be: ${state.user.address}. Please disconnect current active wallet(${account}).`);
-                    return {
-                        result: false
-                    };
-                }
-            }
-            if (chainId != chain) {
-                return {
-                    result: false
-                }
-            }
-            web3 = new Web3(provider);
-
-            // @ts-ignore
-            contract = new web3.eth.Contract(abi, address);
-
-            return {
-                result: true,
-                address: account
-            };
-        } else {
-           alert("Please connect wallet.");
-        }
-    } catch (error) {
-        console.log("error while connect", error);
-    }
-    return {
-        result: false
-    };
-}
-
 const getShortHash = (hash: string) => {
     if (hash.length < 20) {
         return hash;
@@ -577,6 +444,47 @@ function setThemeColors() {
     document.querySelector(':root').style.setProperty('--xendmaincolor', getMainColor());
     // @ts-ignore
     document.querySelector(':root').style.setProperty('--xendlinkcolor', getLinkColor());
+}
+
+const connectWalletFunc = async () => {
+    let provider = getProvider();
+    try {
+        //@ts-ignore
+        const [accounts, chainId] = await getAccounts(provider);
+        if (accounts && chainId) {
+            const account = getNormalizeAddress(accounts);
+            
+            if (state.user.address != null) {
+                if (state.user.address.toLowerCase() != account.toLowerCase()) {
+                    showWalletModal("Wrong Wallet.", `Connect your paired XEND wallet, ${getShortHash(state.user.address)} to continue.`);
+                    return {
+                        result: false
+                    };
+                }
+            }
+            if (chainId != chain) {
+                return {
+                    result: false
+                }
+            }
+            web3 = new Web3(provider);
+
+            // @ts-ignore
+            contract = new web3.eth.Contract(abi, address);
+
+            return {
+                result: true,
+                address: account
+            };
+        } else {
+            showWalletModal("Alert", "Please connect wallet.");
+        }
+    } catch (error) {
+        console.log("error while connect", error);
+    }
+    return {
+        result: false
+    };
 }
 
 async function connectWallet() {
@@ -831,6 +739,7 @@ function logout() {
 
 function createCommentsForm(container: any, postID: any, comments: any) {
     let items: string[] = [];
+    console.log("createCommentsForm");
     // @ts-ignore
     comments.forEach((row: any) => {
         items.push(`
@@ -849,11 +758,35 @@ function createCommentsForm(container: any, postID: any, comments: any) {
     `;
 }
 
-function getFeed(container: any) {
+function createFeedCommentsForm(postID: any, comments: any, authorUID: any) {
     let items: string[] = [];
-
+    console.log("createFeedCommentsForm");
     // @ts-ignore
-    state.feed.forEach(row => {
+    comments.forEach((row: any) => {
+        items.push(`
+        <div class="xend-ext-comments-row"><a href="/${row.author}">@${row.author}</a> ${row.message}</div>
+        `);
+    });
+    return `
+      <div class="xend-ext-dashboard-comments">
+        ` + (comments.length ? `<a class="xend-ext-view-comments" href="#">View ${comments.length} comments</a>` : '') + `
+        <div class="xend-ext-comments-list">
+          ` + items.join("") + `
+        </div>
+        <img class="xend-ext-comments-avatar" src="${avatarImg2}" alt="" draggable="false" />
+        <div class="xend-ext-feedcomment"><input type="text" placeholder="Add a comment"/><a href="#" data-uid="${authorUID}" data-pid="${postID}">Post</a></div>
+      </div>
+    `;
+}
+
+function getFeed(data: any) {
+    let items: string[] = [];
+    console.log("getFeed");
+    if (data.length == 0) {
+        return "";
+    }
+    // @ts-ignore
+    data.forEach(row => {
         let tm = Math.ceil((Date.now() - row.timestamp) / 1000) + "s";
         if (parseInt(tm) / 60 >= 1) {
             tm = Math.ceil(parseInt(tm) / 60) + "m";
@@ -865,28 +798,27 @@ function getFeed(container: any) {
             }
         }
         items.push(`
-        <div class="xend-ext-dashboard-row">
-          <div class="xend-ext-dashboard-column-left"> 
-            <div class="xend-ext-dashboard-news">
-                <img class="xend-ext-dashboard-news-logo" src="${row.imageUrl}" alt="avatar" draggable="false" />
-                <div class="xend-ext-dashboard-news-user"><a href="/${row.author}">@${row.author}</a></div>
-                <div class="xend-ext-dashboard-news-time">&bullet;&nbsp;${tm} ago</div>
+            <div class="xend-ext-dashboard-row">
+            <div class="xend-ext-dashboard-column-left"> 
+                <div class="xend-ext-dashboard-news">
+                    <img class="xend-ext-dashboard-news-logo" src="${row.avatar}" alt="avatar" draggable="false" />
+                    <div class="xend-ext-dashboard-news-user"><a href="/${row.author}">@${row.author}</a></div>
+                    <div class="xend-ext-dashboard-news-time">&bullet;&nbsp;${tm} ago</div>
+                </div>
+                <div class="xend-ext-dashboard-news-title">
+                ${row.message}
+                </div>
             </div>
-            <div class="xend-ext-dashboard-news-title">
-            ${row.message}
+            <div class="xend-ext-dashboard-column-right">
+                ` + (row.imageUrl ? `<img class="xend-ext-dashboard-avatar" src="${row.imageUrl}" alt="avatar" draggable="false" style="margin-top: 18px;" />` : "") + `
             </div>
-          </div>
-          <div class="xend-ext-dashboard-column-right">
-            ` + (row.imageUrl ? `<img class="xend-ext-dashboard-avatar" src="${row.imageUrl}" alt="avatar" draggable="false" style="margin-top: 18px;" />` : "") + `
-          </div>
-          <div style="clear: both"></div>
-          ` + createCommentsForm(container, row.postID, row.comments) + `
-        </div>
+            <div style="clear: both"></div>
+            ` + createFeedCommentsForm(row.postID, row.comments, row.uid) + `
+            </div>
         `);
     });
     return items.join("");
 }
-
 
 const getPrice = (price: any) => {
     let nPrice = price * 1;
@@ -968,6 +900,7 @@ function getKeys(container: any, data: any) {
 function getArticles(container: any, articles: { uid: string; comments: ({ author: string; authorUID: string; postID: string; message: string } | { author: string; message: string })[]; imageUrl: string; postID: string; message: string; timestamp: number }[]) {
     let items: string[] = [];
 
+    console.log("getArticles");
     // @ts-ignore
     articles.forEach(row => {
         let tm = Math.ceil((Date.now() - row.timestamp) / 1000) + "s";
@@ -1055,6 +988,15 @@ function createLogin(node: any) {
     });
 }
 
+const showWalletModal = (header: any, body: any) => {
+    // @ts-ignore
+    document.querySelector("#walletModalHeaderTxt").innerHTML = header;
+    // @ts-ignore
+    document.querySelector("#walletModalMainTxt").innerHTML = body;
+    // @ts-ignore
+    document.querySelector("#walletModal").style.display = "";   
+}
+
 function createWalletConnect(node: any) {
     console.log("createWalletConnect");
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1064,6 +1006,7 @@ function createWalletConnect(node: any) {
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
     node.style.height = '280px';
+    node.style.position = "relative";
     if (!state.authorized || state.walletConnected) {
         node.style.display = 'none';
     }
@@ -1091,6 +1034,18 @@ function createWalletConnect(node: any) {
     <img id="xend-ext-wallet-avatar" class="xend-ext-wallet-avatar" src="${state.user.avatar}" alt="avatar" draggable="false" />
     <div id="xend-ext-wallet-user" class="xend-ext-wallet-user">${state.user.name}</div>
     <button id="xend-ext-wallet-connect-btn"></button>
+    <div id="walletModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon"></div>
+                <p id="walletModalHeaderTxt" class="modal-header-text">Wrong wallet</p>
+            </div>
+            <p id="walletModalMainTxt" class="modal-main-text">
+                Connect your paired XEND wallet, 0x1041...3234 to continue.
+            </p>
+            <button id="walletModalCloseBtn" class="modal-close-button">Close</button>
+        </div>
+    </div>
     `;
     container.innerHTML = pageTpl;
 
@@ -1098,6 +1053,13 @@ function createWalletConnect(node: any) {
     aside.replaceChildren(aside.children[0]);
     aside.getElementsByTagName('div')[0].appendChild(container);
 
+    // @ts-ignore
+    container.querySelector("#walletModalCloseBtn").addEventListener("click", (e) => {
+        // @ts-ignore
+        container.querySelector("#walletModal").style.display = "none";
+    });
+    // @ts-ignore
+    container.querySelector("#walletModal").style.display = "none";
     // @ts-ignore
     container.querySelector("#xend-ext-wallet-connect-btn").addEventListener("click", e => {
         connectWallet();
@@ -1157,6 +1119,194 @@ function createSignUp(node: any) {
     });
 }
 
+const updateFeedPage = async () => {
+    console.log("updateFeedPage", state.user.uid);
+
+    port.postMessage({
+        task: "getFeeds",
+        uid: state.user.uid,
+        token: state.token,
+        secret: state.secret,
+        start: 0,
+        num: state.user.feedPageSize
+    });
+
+    port.onMessage.addListener(function(msg) {
+        if (msg.result === "successGetFeeds") {
+            state.user.feedCount = msg.count;
+            state.feed = msg.results;
+
+            console.log("successGetFeeds", msg.results);
+
+            chrome.storage.local.set({ state });
+            // @ts-ignore
+            document.getElementById("xend-ext-dashboard-profile-feeds").innerHTML = getFeed(msg.results) + `<div id="xend-ext-feed-loader">&nbsp;</div>`;
+
+            // @ts-ignore
+            document.querySelectorAll(".xend-ext-feedcomment input").forEach(el => {
+                const checkInput = () => {
+                    // @ts-ignore
+                    el.nextElementSibling.style.visibility = el.value.trim() === "" ? "hidden" : "visible";
+                };
+                el.addEventListener("input", checkInput);
+                el.addEventListener("change", checkInput);
+                el.addEventListener("post", checkInput);
+                el.addEventListener("focus", checkInput);
+            });
+
+            // @ts-ignore
+            document.querySelectorAll(".xend-ext-feedcomment a").forEach(el => {
+                el.addEventListener("click", (e: any) => {
+                    e.preventDefault();
+
+                    console.log("Feed Comment Post");
+                    // @ts-ignore
+                    const content = e.target.previousElementSibling.value.trim();
+                    // @ts-ignore
+                    const pid = e.target.dataset.pid;
+                    // @ts-ignore
+                    const uid = e.target.dataset.uid;
+                    // @ts-ignore
+                    port.postMessage({
+                        task: "postFeedComment",
+                        content: content,
+                        postID: pid,
+                        token: state.token,
+                        secret: state.secret,
+                        articlePosterUID: uid,
+                        uid: state.user.uid,
+                        start: 0,
+                        num: state.feed.length + state.user.feedPageSize
+                    });
+                    port.onMessage.addListener(function(msg) {
+                        if (msg.result === "successPostFeedComment") {
+                            console.log("successPostFeedComment: ", msg.articles);
+                            state.feed = msg.articles;
+
+                            updateFeedPage();
+                
+                            chrome.storage.local.set({
+                                state: state
+                            });
+                        }
+                    });
+                });
+            });
+
+            // @ts-ignore
+            document.getElementById("xend-ext-dashboard-profile-feeds").addEventListener("scroll", e => {
+                if (!state.loadingFeeds && document.querySelector("#xend-ext-feed-loader")
+                    // @ts-ignore
+                    && (document.querySelector("#xend-ext-feed-loader").offsetTop <
+                        // @ts-ignore
+                        document.querySelector("#xend-ext-feed-loader").parentNode.offsetHeight
+                        // @ts-ignore
+                        + document.querySelector("#xend-ext-feed-loader").parentNode.scrollTop)
+                ) {
+                    state.loadingFeeds = true;
+                    if (state.feed.length == state.user.feedCount) {
+                        state.loadingFeeds = false;
+                        return;
+                    }
+                    // @ts-ignore
+                    const scrollTop = document.querySelector("#xend-ext-dashboard-profile-feeds").scrollTop;
+                    const numOfArticles = document.querySelectorAll("#xend-ext-dashboard-profile-feeds .xend-ext-dashboard-row").length;
+
+                    // @ts-ignore
+                    port.postMessage({
+                        task: "getFeeds",
+                        uid: state.user.uid,
+                        token: state.token,
+                        secret: state.secret,
+                        start: 0,
+                        range: numOfArticles + state.user.feedPageSize
+                    });
+
+                    port.onMessage.addListener(function(msg) {
+                        if (msg.result === "successGetFeeds") {
+                            if (state.feed.length == msg.count || msg.results.length == 0) {
+                                state.loadingFeeds = false;
+                                return;
+                            }
+                            console.log("successGetFeeds", numOfArticles, msg);
+                            state.feed = msg.results;
+        
+                            // @ts-ignore
+                            const item = getFeed(msg.results);
+                            // @ts-ignore
+                            document.querySelector("#xend-ext-feed-loader").innerHTML = item + `<div id="xend-ext-feed-loader">&nbsp;</div>`;
+
+                            // @ts-ignore
+                            document.querySelectorAll(".xend-ext-feedcomment input").forEach(el => {
+                                const checkInput = () => {
+                                    // @ts-ignore
+                                    el.nextElementSibling.style.visibility = el.value.trim() === "" ? "hidden" : "visible";
+                                };
+                                el.addEventListener("input", checkInput);
+                                el.addEventListener("change", checkInput);
+                                el.addEventListener("post", checkInput);
+                                el.addEventListener("focus", checkInput);
+                            });
+
+                            // @ts-ignore
+                            document.querySelectorAll(".xend-ext-feedcomment a").forEach(el => {
+                                el.addEventListener("click", (e: any) => {
+                                    e.preventDefault();
+
+                                    console.log("Feed Comment Post");
+                                    // @ts-ignore
+                                    const content = e.target.previousElementSibling.value.trim();
+                                    // @ts-ignore
+                                    const pid = e.target.dataset.pid;
+                                    // @ts-ignore
+                                    const uid = e.target.dataset.uid;
+                                    // @ts-ignore
+                                    port.postMessage({
+                                        task: "postFeedComment",
+                                        content: content,
+                                        postID: pid,
+                                        token: state.token,
+                                        secret: state.secret,
+                                        articlePosterUID: uid,
+                                        uid: state.user.uid,
+                                        start: state.user.currentRange,
+                                        num: state.user.pageSize
+                                    });
+                                    port.onMessage.addListener(function(msg) {
+                                        if (msg.result === "successPostFeedComment") {
+                                            console.log("successPostFeedComment: ", msg.articles);
+                                            state.user.articles = msg.articles;
+
+                                            updateFeedPage();
+                                
+                                            chrome.storage.local.set({
+                                                state: state
+                                            });
+                                        }
+                                    });
+                                });
+                            });
+                            // @ts-ignore
+                            document.querySelector("#xend-ext-dashboard-profile-feeds").scrollTop = scrollTop;
+                            state.loadingFeeds = false;
+                            chrome.storage.local.set({ state });
+                        }
+                    });
+                }
+            });
+
+            // @ts-ignore
+            document.querySelector('#content-1').classList.add("selected");
+            // @ts-ignore
+            document.querySelector('#content-2').classList.remove("selected");
+            // @ts-ignore
+            document.querySelector('#content-3').classList.remove("selected");
+            // @ts-ignore
+            document.querySelector('#content-4').classList.remove("selected");
+        }
+    });
+}
+
 function createDashboard(node: any) {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
@@ -1191,12 +1341,22 @@ function createDashboard(node: any) {
     const pageTpl = `
     <div class="xend-ext-dashboard-header">
         <div>Dashboard</div>
-        <button id="xend-ext-dashboard-settings-btn" title="Settings"><img id="xend-ext-dashboard-setting-avatar" src="${state.user.avatar}" alt="" draggable="false" /></button>
+        <div class="xend-ext-dashboard-setting">
+            <div id="xend-ext-dashboard-warning" class="tooltip">
+                <span id="xend-ext-dashboard-warningmsg" class="tooltiptext">
+                    Wrong wallet connected on Metamask
+                </span>
+            </div>
+            <button id="xend-ext-dashboard-settings-btn" title="Settings"><img id="xend-ext-dashboard-setting-avatar" src="${state.user.avatar}" alt="" draggable="false" /></button>
+        </div>
     </div>
     
 <div class="tabs">
   <div id="content-1" class="selected">
-    ` + getFeed(container) + `
+    <div id="xend-ext-dashboard-profile-feeds">
+        ` + getFeed(state.feed) + `
+        <div id="xend-ext-feed-loader">&nbsp;</div>
+    </div>
   </div>
 
   <div id="content-2">
@@ -1236,17 +1396,12 @@ function createDashboard(node: any) {
     aside.getElementsByTagName('div')[0].appendChild(container);
 
     // @ts-ignore
+    container.querySelector("#xend-ext-dashboard-warning").style.visibility = "hidden";
+    // @ts-ignore
     container.querySelector('a[href="#content-1"]').addEventListener("click", (e) => {
         console.log("Show Feed Page");
         e.preventDefault();
-        // @ts-ignore
-        container.querySelector('#content-1').classList.add("selected");
-        // @ts-ignore
-        container.querySelector('#content-2').classList.remove("selected");
-        // @ts-ignore
-        container.querySelector('#content-3').classList.remove("selected");
-        // @ts-ignore
-        container.querySelector('#content-4').classList.remove("selected");
+        updateFeedPage();
     });
     // @ts-ignore
     container.querySelector('a[href="#content-2"]').addEventListener("click", (e) => {
@@ -1326,6 +1481,7 @@ function createDashboard(node: any) {
                 if (msg.result === "successDeleteArticle") {
                     console.log("successDeleteArticle: ", msg.articles);
                     state.user.articles = msg.articles;
+                    state.user.articleCount = msg.count;
                     state.user.currentRange = msg.start;
 
                     updateProfilePage();
@@ -1541,6 +1697,8 @@ function createDashboard(node: any) {
                 console.log("setArticleCount", msg.count);
 
                 updateProfilePage();
+                chrome.storage.local.set({ state });
+
                 // @ts-ignore
                 container.querySelector('#content-3').classList.add("selected");
                 // @ts-ignore
@@ -1712,6 +1870,10 @@ function createDashboard(node: any) {
                 // @ts-ignore
                 + document.querySelector("#xend-ext-articles-loader").parentNode.scrollTop)
         ) {
+            if (state.user.articleCount == state.user.articles.length) {
+                return;
+            }
+
             state.loadingArticles = true;
             // @ts-ignore
             const scrollTop = document.querySelector("#xend-ext-dashboard-profile-articles").scrollTop;
@@ -1729,21 +1891,43 @@ function createDashboard(node: any) {
 
             port.onMessage.addListener(function(msg) {
                 if (msg.result === "setNextArticlesPage") {
+                    console.log("setNextArticlesPage", msg);
+                    if (msg.articles.length == 0) {
+                        state.loadingArticles = false;
+                        return;
+                    }
+                    if (state.user.articleCount == state.user.articles.length) {
+                        state.loadingArticles = false;
+                        return;
+                    }
                     // @ts-ignore
                     msg.articles.forEach(article => {
+                        // @ts-ignore
                         state.user.articles.push(article);
                     });
-                    const item = getArticles(container, msg.articles);
-                    // @ts-ignore
-                    document.querySelector("#xend-ext-articles-loader").insertAdjacentHTML("beforebegin", item);
+            
+                    updateProfilePage();
+                    // const item = getArticles(container, msg.articles);
+                    // // @ts-ignore
+                    // document.querySelector("#xend-ext-articles-loader").insertAdjacentHTML("beforebegin", item);
                     // @ts-ignore
                     document.querySelector("#xend-ext-dashboard-profile-articles").scrollTop = scrollTop;
                     state.loadingArticles = false;
+                    chrome.storage.local.set({ state });
                 }
             });
 
         }
     });
+}
+
+const showBuySellModal = (header: any, body: any) => {
+    // @ts-ignore
+    document.querySelector("#buySellModalHeaderTxt").innerHTML = header;
+    // @ts-ignore
+    document.querySelector("#buySellModalMainTxt").innerHTML = body;
+    // @ts-ignore
+    document.querySelector("#buySellModal").style.display = "";   
 }
 
 const createProfileMenu = (node: any) => {
@@ -1755,6 +1939,7 @@ const createProfileMenu = (node: any) => {
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
     node.style.height = '280px';
+    node.style.position = "relative";
     if (!state.authorized || !state.walletConnected || !state.signedUp) {
         node.style.display = 'none';
     }
@@ -1804,36 +1989,50 @@ const createProfileMenu = (node: any) => {
             Keys
             <div id="xend-ext-menu-sharessupply">0</div>
             </div>
-            <div class="xend-ext-menu-left-row">
+            <div id="xend-ext-menu-up-trend-wrapper" class="xend-ext-menu-left-row">
             24h
             <div id="xend-ext-menu-up-trend" class="xend-ext-menu-up-trend-long">0%</div>
             </div>
         </div>
         <div class="xend-ext-menu-right-col">
-        Keys
-        <div class="xend-ext-menu-key">
-            <div class="xend-ext-menu-key-value">
-                <input type="number" value="0" id="xend-ext-menu-key-input" />
-                <div id="xend-ext-menu-key-price">0</div>
+            <div class="xend-ext-menu-switch">
+                <div id="xend-ext-menu-switch-title">Keys</div>
+                <button id="xend-ext-menu-friendtech" class="xend-ext-menu-switch-platform"></button>
+                <button id="xend-ext-menu-xend" class="xend-ext-menu-switch-platform"></button>
             </div>
-            <button id="xend-ext-menu-key-buy" class="spinner-button">
-                <span class="spinner-button-text">Buy</span>
+            <div class="xend-ext-menu-key">
+                <div class="xend-ext-menu-key-value">
+                    <input type="number" value="0" id="xend-ext-menu-key-input" />
+                    <div id="xend-ext-menu-key-price">0</div>
+                </div>
+                <button id="xend-ext-menu-key-buy" class="spinner-button">
+                    <span class="spinner-button-text">Buy</span>
+                </button>
+                <button id="xend-ext-menu-key-sell" class="spinner-button">
+                    <span class="spinner-button-text">Sell</span>
+                </button>
+            </div>
+            Premium Content
+            <div id="xend-ext-menu-premium" class="xend-ext-menu-premium">
+                Hold <em>1 keys</em> or <em>subscribe</em> to unlock. Friend.tech supported.
+            </div>
+            <button id="xend-ext-menu-premium-btn" class="spinner-button">
+                <span id="xend-ext-menu-premium-btn-text" class="spinner-button-text">1 Month • 1 ETH</span>
             </button>
-            <button id="xend-ext-menu-key-sell" class="spinner-button">
-                <span class="spinner-button-text">Sell</span>
-            </button>
-        </div>
-        Premium Content
-        <div id="xend-ext-menu-premium" class="xend-ext-menu-premium">
-        Hold <em>1 keys</em> or <em>subscribe</em> to unlock. Friend.tech supported.
-        </div>
-        <button id="xend-ext-menu-premium-btn" class="spinner-button">
-            <span id="xend-ext-menu-premium-btn-text" class="spinner-button-text">1 Month • 1 ETH</span>
-        </button>
         </div>
     </div>
-    
-  
+    <div id="buySellModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon"></div>
+                <p id="buySellModalHeaderTxt" class="modal-header-text">Wrong wallet</p>
+            </div>
+            <p id="buySellModalMainTxt" class="modal-main-text">
+                Connect your paired XEND wallet, 0x1041...3234 to continue.
+            </p>
+            <button id="buySellModalCloseBtn" class="modal-close-button">Close</button>
+        </div>
+    </div>
     `;
     container.innerHTML = pageTpl;
 
@@ -1841,7 +2040,314 @@ const createProfileMenu = (node: any) => {
     aside.replaceChildren(aside.children[0]);
     aside.getElementsByTagName('div')[0].appendChild(container);
 
+    // @ts-ignore
+    container.querySelector("#buySellModal").style.display = "none";
+
+    // @ts-ignore
+    container.querySelector("#buySellModalCloseBtn")?.addEventListener("click", (e) => {
+        // @ts-ignore
+        container.querySelector("#buySellModal").style.display = "none";
+    })
+    // @ts-ignore
+    container.querySelector("#xend-ext-menu-friendtech").addEventListener("click", (e) => {
+        updateBuySellPageFriendTech();
+    });
+
+    // @ts-ignore
+    container.querySelector("#xend-ext-menu-xend").addEventListener("click", (e) => {
+        // @ts-ignore
+        container.querySelector("#xend-ext-menu-up-trend-wrapper").style.display = "";
+        
+        let path = window.location.href;
+        const prefix = "https://twitter.com/";
+        path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
+        
+        port.postMessage({
+            task: "getKeyInfo",
+            keyOwnerName: path,
+            token: state.token,
+            secret: state.secret,
+            uid: state.user.uid
+        });
+
+        port.onMessage.addListener(async function(msg: any) {
+            if (msg.result === "successGetKeyInfo") {
+                console.log("successGetKeyInfo", msg.data);
+                if (msg.data.result == "error") {
+                    // @ts-ignore
+                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+                } else {
+                    state.profile.holderNum = msg.data.data.holderNum;
+                    state.profile.keyBalance = msg.data.data.keyBalance;
+                    state.profile.priceInETH = msg.data.data.priceInETH;
+                    state.profile.changeRate = msg.data.data.changeRate;
+                    state.profile.myKeyBalance = msg.data.data.myKeyBalance;
+                    state.profile.keyId = msg.data.data.keyId;
+                    state.profile.keyOwnerName = msg.data.data.keyOwnerName;
+                    state.profile.keyAvatar = msg.data.data.keyAvatar;
+                    state.profile.keyAddress = msg.data.data.keyAddress;
+                    state.profile.isSubscribed = msg.data.data.isSubscribed;
+                    
+                    isPendingBuy = false;
+                    isPendingSell = false;
+
+                    chrome.storage.local.set({
+                        state: state
+                    });
+
+                    updateBuySellPageXend();
+                }
+            }
+        });
+    });
 };
+
+async function updateBuySellPageFriendTech() {
+    let path = window.location.href;
+    const prefix = "https://twitter.com/";
+    path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
+
+    port.postMessage({
+        task: "getFriendTechInfo",
+        name: path
+    });
+
+    // @ts-ignore
+    port.onMessage.addListener(async function(msg: any) {
+        if (msg.result === "successGetFriendTechInfo") {
+            console.log("successGetFriendTechInfo", msg);
+            if (msg.id == null) {
+                return;
+            }
+
+            state.profile.holderNum = msg.holderCount;
+            state.profile.keyBalance = msg.shareSupply;
+            state.profile.priceInETH = Web3.utils.fromWei(msg.displayPrice, "ether");
+            state.profile.keyAddress = msg.address;
+            state.profile.keyAvatar = msg.twitterPfpUrl;
+            state.profile.keyOwnerName = msg.twitterUsername;
+            state.profile.keyId = msg.twitterUserId;
+            state.profile.myKeyBalance = msg.balance;
+            
+            const prov = new ethers.providers.Web3Provider(getProvider());
+
+            signer = prov.getSigner();
+            console.log(signer);
+            // const friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);            
+            
+            // try {
+            //     let amount = await friendTechContract.connect(signer)["sharesBalance"](msg.address, state.user.address);
+            //     state.profile.myKeyBalance = amount;
+            // } catch (error) {
+            //     console.log(error);
+            //     state.profile.myKeyBalance = "0";
+            // }
+
+            const WETHPrice = await getTokenPrice(addrTokenWETH);
+            console.log("updateBuySellPageFriendTech", WETHPrice);
+        
+            let usdprice = "";
+            usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
+            console.log(document.getElementById("xend-ext-menu-usdprice"));
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-ethprice").innerHTML = (state.profile.priceInETH * 1).toFixed(5);
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-usdprice").innerHTML = usdprice;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-avatar").src = state.profile.keyAvatar;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-user").innerHTML = state.profile.keyOwnerName;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-holdernum").innerHTML = state.profile.holderNum;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-sharessupply").innerHTML = state.profile.keyBalance;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-input").addEventListener("change", (e: any) => {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-price").innerHTML = (e.target.value * Number(state.profile.priceInETH)).toFixed(5);
+            });
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-sharesbalance").innerHTML = state.profile.myKeyBalance;
+
+            isPendingBuy = false;
+            isPendingSell = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").addEventListener("click", async (e: any) => {
+                if (isPendingBuy && isPendingSell) {
+                    return;
+                }
+                isPendingBuy = true;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").disabled = true;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
+                // @ts-ignore
+                let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
+        
+                if (amt <= 0) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    isPendingBuy = false;
+                    showBuySellModal("Alert", "Please input positive value.");
+                    return;
+                }
+        
+                const prov = new ethers.providers.Web3Provider(getProvider());
+        
+                signer = prov.getSigner();
+                let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
+
+                try {
+                    let price = await friendTechContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
+        
+                    const result = await friendTechContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
+                        value: parseInt(price._hex).toString()
+                    });
+        
+                    if (!result.hash) {
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                        isPendingBuy = false;
+                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                        return;
+                    }
+                    // @ts-ignore
+                    result.wait().then(res => {
+                        console.log(res);
+                        // @ts-ignore
+                        if (res.status == 1) {
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                            isPendingBuy = false;
+                            setTimeout(() => {
+                                checkURL(false);
+                            }, 1000);
+                        } else {
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                            isPendingBuy = false;
+                            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                        }
+                    });
+                } catch (error) {
+                    console.log("buyKey", error);
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    isPendingBuy = false;
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                }
+            });
+
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").addEventListener("click", async (e: any) => {
+                if (isPendingSell && isPendingBuy) {
+                    return;
+                }
+                isPendingSell = true;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").disabled = true;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
+                // @ts-ignore
+                let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
+        
+                if (amt <= 0) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    isPendingSell = false;
+                    showBuySellModal("Alert", "Please input positive value.");
+                    return;
+                }
+        
+                const prov = new ethers.providers.Web3Provider(getProvider());
+        
+                signer = prov.getSigner();
+                let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
+
+                try {
+                    let price = await friendTechContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
+        
+                    const result = await friendTechContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
+                        value: parseInt(price._hex).toString()
+                    });
+        
+                    if (!result.hash) {
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                        isPendingSell = false;
+                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                        return;
+                    }
+                    // @ts-ignore
+                    result.wait().then(res => {
+                        console.log(res);
+                        // @ts-ignore
+                        if (res.status == 1) {
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                            isPendingSell = false;
+                            
+                            setTimeout(() => {
+                                checkURL(false);
+                            }, 1000);
+                        } else {
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                            // @ts-ignore
+                            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                            isPendingSell = false;
+                            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                        }
+                    });
+                } catch (error) {
+                    console.log("sellKey", error);
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    isPendingSell = false;
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                }
+            });
+
+            chrome.storage.local.set({
+                state: state
+            });
+
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-up-trend-wrapper").style.display = "none";
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").disabled = true;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn-text").text = "Disabled";
+        }
+    });
+}
+
+const showSettingModal = (header: any, body: any) => {
+    // @ts-ignore
+    document.querySelector("#settingModalHeaderTxt").innerHTML = header;
+    // @ts-ignore
+    document.querySelector("#settingModalMainTxt").innerHTML = body;
+    // @ts-ignore
+    document.querySelector("#settingModal").style.display = "";   
+}
 
 function createSettings(node: any) {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1851,7 +2357,8 @@ function createSettings(node: any) {
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
     node.style.height = '425px';
-    node.style.display = 'none';
+    node.style.position = "relative";
+    node.style.display = "none";
     node.getElementsByTagName('aside')[0].setAttribute('xend', 'settings');
     if (node.getElementsByTagName('span')[0]) {
         node.getElementsByTagName('span')[0].remove();
@@ -1897,6 +2404,9 @@ function createSettings(node: any) {
           <div style="clear: both"></div>
         </div>
     </div>
+    <div id="xendExtLogoutWrapper">
+        <button id="xend-ext-logout-bottom">Logout</button>
+    </div>
     <div id="xendExtSubscriptionDetail" style="display: none">
         <div id="xendExtSubscriptionDetailBack">Back</div>
         <div class="xend-ext-subscription-title">Subscriptions</div>
@@ -1918,6 +2428,18 @@ function createSettings(node: any) {
             </button>
         </div>
     </div>
+    <div id="settingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon"></div>
+                <p id="settingModalHeaderTxt" class="modal-header-text">Wrong setting</p>
+            </div>
+            <p id="settingModalMainTxt" class="modal-main-text">
+                Connect your paired XEND setting, 0x1041...3234 to continue.
+            </p>
+            <button id="settingModalCloseBtn" class="modal-close-button">Close</button>
+        </div>
+    </div>
     `;
     container.innerHTML = pageTpl;
 
@@ -1926,7 +2448,22 @@ function createSettings(node: any) {
     aside.getElementsByTagName('div')[0].appendChild(container);
 
     // @ts-ignore
+    container.querySelector("#settingModal").style.display = "none";
+    // @ts-ignore
+    container.querySelector("#settingModalCloseBtn").addEventListener("click", (e) => {
+        // @ts-ignore
+        container.querySelector("#settingModal").style.display = "none";
+    });
+    // @ts-ignore
+    container.querySelector("#xend-ext-logout").style.display = "none";
+    // @ts-ignore
+    container.querySelector("#xendExtLogoutWrapper").style.display = "";
+    // @ts-ignore
     container.querySelector("#xendExtSettingsSubscriptions").addEventListener("click", e => {
+            // @ts-ignore
+            container.querySelector("#xendExtLogoutWrapper").style.display = "none";
+            // @ts-ignore
+            container.querySelector("#xend-ext-logout").style.display = "";
             // @ts-ignore
             container.querySelector("#xendExtSettingsList").style.display = "none";
             // @ts-ignore
@@ -1967,13 +2504,14 @@ function createSettings(node: any) {
 
         // @ts-ignore
         let price = document.getElementById("xendExtSubscriptionPrice").value;
-        if (price < 0 && price > 100) {
+        console.log(typeof price, price);
+        if (price <= 0 || price > 100) {
             isPendingUpdatePrice = false;
             // @ts-ignore
             document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
             // @ts-ignore
             document.getElementById("xendExtSubscriptionUpdate").disabled = false;
-            alert("Please input positive value less than 100ETH.");
+            showSettingModal("Alert", "Please input positive value less than 100ETH.");
             return;
         }
 
@@ -1993,7 +2531,7 @@ function createSettings(node: any) {
                     document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
                     // @ts-ignore
                     document.getElementById("xendExtSubscriptionUpdate").disabled = false;
-                    alert("Transaction Failed.");
+                    showSettingModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                     return;
                 }
                 // @ts-ignore
@@ -2004,9 +2542,9 @@ function createSettings(node: any) {
                     // @ts-ignore
                     document.getElementById("xendExtSubscriptionUpdate").disabled = false;
                     if (res.status) {
-                        alert("Transaction Succeed.");
+                        return;
                     } else {
-                        alert("Transaction Failed.");
+                        showSettingModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                     }
                 });
             } catch (error) {
@@ -2016,7 +2554,7 @@ function createSettings(node: any) {
                 document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
                 // @ts-ignore
                 document.getElementById("xendExtSubscriptionUpdate").disabled = false;
-                alert("Transaction Failed.");
+                showSettingModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
             }
         } else {
             // @ts-ignore
@@ -2037,7 +2575,7 @@ function createSettings(node: any) {
                     document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
                     // @ts-ignore
                     document.getElementById("xendExtSubscriptionUpdate").disabled = false;
-                    alert("Transaction Failed.");
+                    showSettingModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                     return;
                 }
                 // @ts-ignore
@@ -2050,9 +2588,9 @@ function createSettings(node: any) {
                     // @ts-ignore
                     document.getElementById("xendExtSubscriptionCheckbox").disabled = true;                    
                     if (res.status) {
-                        alert("Transaction Succeed.");
+                        
                     } else {
-                        alert("Transaction Failed.");
+                        showSettingModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                     }
                 });
             } catch (error) {
@@ -2062,7 +2600,7 @@ function createSettings(node: any) {
                 document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
                 // @ts-ignore
                 document.getElementById("xendExtSubscriptionUpdate").disabled = false;
-                alert("Transaction Failed.");
+                showSettingModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
             }
         }
     });
@@ -2072,6 +2610,10 @@ function createSettings(node: any) {
         container.querySelector("#xendExtSubscriptionDetail").style.display = "none";
         // @ts-ignore
         container.querySelector("#xendExtSettingsList").style.display = "block";
+        // @ts-ignore
+        container.querySelector("#xend-ext-logout").style.display = "none";
+        // @ts-ignore
+        container.querySelector("#xendExtLogoutWrapper").style.display = "";
     }, false);
 
     // @ts-ignore
@@ -2088,15 +2630,20 @@ function createSettings(node: any) {
     }, false);
 
     // @ts-ignore
+    container.querySelector("#xend-ext-logout-bottom").addEventListener("click", e => {
+        logout();
+    }, false);
+
+    // @ts-ignore
     container.querySelector("#copyAddress").addEventListener("click", e => {
         // @ts-ignore
         navigator.clipboard.writeText(e.target.dataset.address);
     }, false);
 }
 
-const updateBuySellPage = async () => {
+const updateBuySellPageXend = async () => {
     const WETHPrice = await getTokenPrice(addrTokenWETH);
-    console.log("updateBuySellPage", WETHPrice);
+    console.log("updateBuySellPageXend", WETHPrice);
 
     let usdprice = "";
     usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
@@ -2153,7 +2700,7 @@ const updateBuySellPage = async () => {
 
         chrome.storage.local.set({ state });
     } catch (error: any) {
-        console.log("updateBuySellPage", error);
+        console.log("updateBuySellPageXend", error);
     }
 
     // @ts-ignore
@@ -2185,7 +2732,7 @@ const updateBuySellPage = async () => {
                 document.getElementById("xend-ext-menu-premium-btn").disabled = false;
                 // @ts-ignore
                 document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
-                alert("Transaction Failed.");
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                 return;
             }
             // @ts-ignore
@@ -2204,7 +2751,7 @@ const updateBuySellPage = async () => {
                     document.getElementById("xend-ext-menu-premium-btn").disabled = false;
                     // @ts-ignore
                     document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
-                    alert("Transaction Failed");
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                 }
             });
         } catch (error) {
@@ -2214,7 +2761,7 @@ const updateBuySellPage = async () => {
             document.getElementById("xend-ext-menu-premium-btn").disabled = false;
             // @ts-ignore
             document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
-            alert("Transaction Failed");
+            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
         }
     });
 
@@ -2237,7 +2784,7 @@ const updateBuySellPage = async () => {
             // @ts-ignore
             document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
             isPendingBuy = false;
-            alert("Please input positive value.");
+            showBuySellModal("Alert", "Please input positive value.");
             return;
         }
 
@@ -2260,7 +2807,7 @@ const updateBuySellPage = async () => {
                 // @ts-ignore
                 document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
                 isPendingBuy = false;
-                alert("Transaction Failed.");
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                 return;
             }
             // @ts-ignore
@@ -2273,7 +2820,7 @@ const updateBuySellPage = async () => {
                     // @ts-ignore
                     document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
                     isPendingBuy = false;
-                    alert("Transaction Succeed.");
+                    
                     setTimeout(() => {
                         checkURL(false);
                     }, 1000);
@@ -2283,7 +2830,7 @@ const updateBuySellPage = async () => {
                     // @ts-ignore
                     document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
                     isPendingBuy = false;
-                    alert("Transaction Failed.");
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                 }
             });
         } catch (error) {
@@ -2293,7 +2840,7 @@ const updateBuySellPage = async () => {
             // @ts-ignore
             document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
             isPendingBuy = false;
-            alert("Transaction Failed.");
+            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
         }
     });
 
@@ -2316,7 +2863,7 @@ const updateBuySellPage = async () => {
             // @ts-ignore
             document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
             isPendingSell = false;
-            alert("Please input positive value.");
+            showBuySellModal("Alert", "Please input positive value.");
             return;
         }
 
@@ -2339,7 +2886,7 @@ const updateBuySellPage = async () => {
                 // @ts-ignore
                 document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
                 isPendingSell = false;
-                alert("Transaction Failed.");
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                 return;
             }
             // @ts-ignore
@@ -2352,7 +2899,7 @@ const updateBuySellPage = async () => {
                     // @ts-ignore
                     document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
                     isPendingSell = false;
-                    alert("Transaction Succeed.");
+                   
                     setTimeout(() => {
                         checkURL(false);
                     }, 1000);
@@ -2362,7 +2909,7 @@ const updateBuySellPage = async () => {
                     // @ts-ignore
                     document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
                     isPendingSell = false;
-                    alert("Transaction Failed.");
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
                 }
             });
         } catch (error) {
@@ -2372,7 +2919,7 @@ const updateBuySellPage = async () => {
             // @ts-ignore
             document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
             isPendingSell = false;
-            alert("Transaction Failed.");
+            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
         }
     });
 
@@ -2392,6 +2939,8 @@ const checkURL = async (isStart: boolean) => {
         document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
     }
 
+    updateFeedPage();
+    
     let path = window.location.href;
     const prefix = "https://twitter.com/";
     path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
@@ -2426,7 +2975,7 @@ const checkURL = async (isStart: boolean) => {
                     state: state
                 });
 
-                await updateBuySellPage();
+                await updateBuySellPageXend();
 
                 if (state.walletConnected && state.authorized && state.signedUp) {
                     // @ts-ignore
@@ -2443,7 +2992,6 @@ const onMutation = async (mutations: MutationRecord[]) => {
     for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
             const nodes = traverseAndFindAttribute(node, 'aside');
-            console.log("=== start ===");
             // @ts-ignore
             nodes.forEach((n: any) => {
                 const sidebar = n.parentElement.parentElement.parentElement;

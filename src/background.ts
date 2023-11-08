@@ -202,7 +202,8 @@ chrome.runtime.onConnect.addListener(function(port) {
                     port.postMessage({
                         result: "successDeleteArticle", 
                         start: result.start,
-                        articles: result.articles
+                        articles: result.articles,
+                        count: result.count
                     });
                 }
                 console.log(result);
@@ -291,6 +292,68 @@ chrome.runtime.onConnect.addListener(function(port) {
                     result: "successGetCompatibility", 
                     isCompatibility: false
                 });
+            }
+        } else if (msg.task === "getFeeds") {
+            try {
+                console.log("getFeeds", msg);
+                let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_feeds?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${msg.start}&num=${msg.num}`)).json();
+                port.postMessage({
+                    result: "successGetFeeds", 
+                    count: res.count,
+                    results: res.result
+                });
+            } catch (error) {
+
+            }
+        } else if (msg.task === "postFeedComment") {
+            console.log("postFeedComment", msg);
+            const data = {
+                postID: msg.postID,
+                content: msg.content,
+                token: msg.token,
+                secret: msg.secret,
+                uid: msg.uid,
+                articlePosterUID: msg.articlePosterUID,
+                start: msg.start,
+                num: msg.num
+            };
+            const result = await (await fetch(`http://82.180.136.36:3001/backend/user/post_comment_feed`, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+            })).json();
+
+            if (result.articles.length > 0) {
+                port.postMessage({
+                    result: "successPostFeedComment", 
+                    articles: result.articles
+                });    
+            }
+        } else if (msg.task === "getFriendTechInfo") {
+            try {
+                console.log("getFeeds", msg);
+                let res = await (await fetch(`https://prod-api.kosetto.com/twitter-users/${msg.name}`)).json();
+                if (msg.address != null) {
+                    let holders = await (await fetch(`https://prod-api.kosetto.com/users/${msg.address.toLowerCase()}/token/holders`)).json();
+                    let balance = 0;
+                    for (let i = 0; i < holders.users.length; i++) {
+                        if (msg.name == holders.users[i].twitterUsername) {
+                            balance = holders.users[i].balance;
+                        }
+                    }
+                    port.postMessage({
+                        result: "successGetFriendTechInfo", 
+                        ...res,
+                        balance
+                    });
+                } else {
+                    port.postMessage({
+                        result: "successGetFriendTechInfo", 
+                        ...res
+                    });
+                }
+            } catch (error) {
+
             }
         }
     });

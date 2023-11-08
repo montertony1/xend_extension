@@ -148,6 +148,56 @@
     font-weight: bold;
     line-height: 32px;
 }
+.xend-ext-dashboard-setting {
+    display: flex;
+    flex-direction: row;
+    align-items: end;
+}
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted var(--xendhorline);
+}
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 144px;
+    height: 34px;
+    background-color: var(--xendhorline);
+    color: var(--xendmaincolor);
+    text-align: center;
+    border-radius: 6px;
+    padding: 2px 2px !important;
+    position: absolute;
+    z-index: 10;
+    font-size: 12px !important;
+    font-weight: 510;
+    text-align: center;
+    top: 150%;
+    left: 66%;
+    line-height: 16px;
+    margin-left: -100px;
+  }
+  
+  .tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: -35%;
+    left: 66%;
+    margin-left: -5px;
+    border-width: 7px;
+    border-style: solid;
+    border-color: transparent transparent var(--xendhorline) transparent;
+  }
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+#xend-ext-dashboard-warning {
+    width: 18px;
+    height: 18px;
+    background: url(/static/img/warning.png) 0px 1px no-repeat;
+    background-size: 20px;
+    background-position: center;
+}
 #xend-ext-dashboard-settings-btn {
     position: relative;
     float: right;
@@ -394,6 +444,44 @@ img.xend-ext-dashboard-avatar {
     color: #ff6567;
     font-size: 12px;
     cursor: pointer;
+}
+#xend-ext-menu-switch-title {
+    width: 40px;
+    position: absolute;
+    left: 0px;
+}
+.xend-ext-menu-switch {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    position: relative;
+    margin-bottom: 5px;
+    width: 100%;
+    height: 30px;
+}
+.xend-ext-menu-switch-platform {
+    width: 50px;
+    height: 30px;
+    background-color: #393939;
+    border-radius: 10px;
+    border: solid 1px;
+    margin-left: 10px;
+}
+#xend-ext-menu-xend {
+    position: absolute;
+    background: url(/static/img/xend-btn.png) 0px 1px no-repeat;
+    background-size: 23px;
+    background-position: center;
+    right: 0px;
+    top: 0px;
+}
+#xend-ext-menu-friendtech {
+    position: absolute;
+    background: url(/static/img/friendtech-btn.png) 0px 1px no-repeat;
+    background-size: 23px;
+    background-position: center;
+    right: 60px;
+    top: 0px;
 }
 .xend-ext-menu-header {
     width: 100%;
@@ -683,7 +771,27 @@ div#xend-ext-menu-value div {
     top: 1px;
     right: -2px;
 }
+#xendExtLogoutWrapper {
+    position: relative;
+    width: 100%;
+    height: 80px;
+}
 button#xend-ext-logout {
+    float: right;
+    margin-top: 12px;
+    border: none;
+    border-radius: 11px;
+    color: var(--xendbuttonwhite);
+    background: var(--xendbuttonbg);
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 6px 14px;
+}
+button#xend-ext-logout-bottom {
+    position: absolute;
+    bottom: 10px;
+    left: 120px;
     float: right;
     margin-top: 12px;
     border: none;
@@ -1012,6 +1120,31 @@ img.xend-ext-comments-avatar {
     height: 28px;
     border-radius: 14px;
 }
+.xend-ext-feedcomment {
+    float: right;
+    width: calc(100% - 40px);
+    vertical-align: middle;
+    background: #363636;
+    padding: 4px;
+    border-radius: 7px;
+}
+.xend-ext-feedcomment input {
+    border: 0;
+    background: transparent;
+    outline: none;
+    color: var(--xendbuttonwhite);
+    padding: 2px 0 2px 2px;
+    box-sizing: border-box;
+    width: calc(100% - 37px);
+}
+.xend-ext-feedcomment a {
+    display: inline-block;
+    vertical-align: middle;
+    color: var(--xendlinkcolor);
+    font-size: 15px;
+    text-decoration: none;
+    visibility: hidden;
+}
 .xend-ext-comment {
     float: right;
     width: calc(100% - 40px);
@@ -1195,33 +1328,34 @@ a[href="#content-4"]:before {
 .tabs>div.selected {
     display: block;
 }
+#xend-ext-dashboard-profile-feeds {
+    max-height: 295px;
+    overflow-y: auto;
+    position: relative;
+}
 #xend-ext-dashboard-row-container {
     max-height: 220px;
     overflow-y: auto;
     position: relative;
-}
-div#content-1 {
-    max-height: 295px;
-    overflow-y: auto;
 }
 #xend-ext-dashboard-profile-articles {
     height: 190px;
     overflow-y: auto;
     position: relative;
 }
-#xend-ext-dashboard-profile-articles .xend-ext-dashboard-row:first-child {
+#xend-ext-dashboard-profile-feeds #xend-ext-dashboard-profile-articles .xend-ext-dashboard-row:first-child {
     margin-top: 0;
 }
 #xend-ext-dashboard-row-container::-webkit-scrollbar,
 #xend-ext-dashboard-profile-articles::-webkit-scrollbar,
-div#content-1::-webkit-scrollbar {
+#xend-ext-dashboard-profile-feeds::-webkit-scrollbar {
     width: 5px;
     height: 5px;
     background-color: var(--xendsecondcolor);
 }
 #xend-ext-dashboard-row-container::-webkit-scrollbar-thumb,
 #xend-ext-dashboard-profile-articles::-webkit-scrollbar-thumb,
-div#content-1::-webkit-scrollbar-thumb {
+#xend-ext-dashboard-profile-feeds::-webkit-scrollbar-thumb {
     background-color: var(--xendmaincolor);
 }
 #content-4 {
@@ -1235,4 +1369,69 @@ div#content-1::-webkit-scrollbar-thumb {
     border: 0;
     margin-left: -16px;
     margin-right: -16px;
+}
+.modal {
+    display: block;
+    position: absolute;
+    z-index: 10;
+    padding-top: 50px;
+    left: 0;
+    top: 0;
+    color: --xendmaincolor;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: var(--xendhorline);
+    background-color: rgba(22,24,18,0.4);
+}
+.modal-content {
+    background-color: var(--xendhorline);
+    margin: auto;
+    padding: 10px;
+    width: 250px;
+    border-radius: 20px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.modal-close-button {
+    width: 80px;
+    height: 34px;
+    border-radius: 10px;
+    color: var(--xendmaincolor);
+    font-size: 16px;
+    font-weight: 700;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.modal-main-text {
+    font-weight: 510;
+    font-size: 12px;
+    color: var(--xendsecondcolor);
+    width: 100%;
+    text-align: center;
+}
+.modal-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 0px;
+    justify-content: center;
+}
+.modal-header-text {
+    color: var(--xendmaincolor);
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0px 0px;
+}
+.modal-icon {
+    width: 20px;
+    height: 20px;
+    background: url(/static/img/alert.png) 0px 1px no-repeat;
+    background-size: 20px;
+    background-position: center;
+    margin-right: 4px;
 }
