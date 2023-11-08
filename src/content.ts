@@ -13,25 +13,29 @@ import {
     friendTechAddress, 
     friendTechChain 
 } from "./config";
+// @ts-ignore
 import axios from "axios";
 
 // @ts-ignore
 import { detect } from 'detect-browser';
-import { createSign, sign } from 'crypto';
+
 const browser = detect();
 
+// @ts-ignore
 const logoW = chrome.runtime.getURL("/static/img/xend-small-white.png");
+// @ts-ignore
 const logoB = chrome.runtime.getURL("/static/img/xend-small-black.png");
+// @ts-ignore
 const avatarImg = chrome.runtime.getURL("/static/img/avatar.png");
+// @ts-ignore
 const avatarImg2 = chrome.runtime.getURL("/static/img/avatar2.png");
+// @ts-ignore
 const styleList = chrome.runtime.getURL("/static/css/style.css");
 
 let isPendingSubscribe = false;
 let isPendingBuy = false;
 let isPendingSell = false;
 let isPendingUpdatePrice = false;
-
-var port = chrome.runtime.connect({name: "authorize"});
 
 let state = {
     signedUp: false,
@@ -103,19 +107,24 @@ const user = {
 
 const addrTokenWETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 const apiUrl = 'https://api.coingecko.com/api/v3';
+
+const config = {
+    "CHROME_ID": "nkbihfbeogaeaoehlefnkodbefgpgknn",
+    "FIREFOX_ID": "webextension@metamask.io"
+}
+//////////////////////////////////////////////////////////////////  Utility Functions
 async function getTokenPrice(tokenAddr: string) {
     try {
         const response = await axios.get(`${apiUrl}/simple/token_price/ethereum?contract_addresses=${tokenAddr}&vs_currencies=usd&include_market_cap=true`);
         const tokenPrice = response.data[tokenAddr.toLowerCase()].usd;
         return tokenPrice;
     } catch (error: any) {
-        console.error('Error fetching token price:', error.message);
+        console.error('getTokenPrice:', error.message);
         return 0;
     }
 }
 
-const validateMetamaskAddress = (address: string) => {
-    console.log("validateMetamaskAddress", address);
+function validateMetamaskAddress(address: string) {
     try {
       Web3.utils.toChecksumAddress(address);
       if (address.slice(0, 2) != "0x") {
@@ -128,7 +137,7 @@ const validateMetamaskAddress = (address: string) => {
 }
 
 // @ts-ignore
-async function signMessage(message, provider, signer) {
+async function signMessage(message, signer) {
     try {
         const signature = await signer.signMessage(message);
         return signature;    
@@ -138,13 +147,8 @@ async function signMessage(message, provider, signer) {
     }
 }
 
-const getNormalizeAddress = (accounts: any) => {
+function getNormalizeAddress(accounts: any) {
     return accounts[0] ? accounts[0].toLowerCase() : null
-}
-
-const config = {
-    "CHROME_ID": "nkbihfbeogaeaoehlefnkodbefgpgknn",
-    "FIREFOX_ID": "webextension@metamask.io"
 }
 
 function getMetaMaskId () {
@@ -158,31 +162,26 @@ function getMetaMaskId () {
     }
 }
 
-const getInPageProvider = () => {
-    let provider
+function getInPageProvider() {
+  let provider;
   try {
     let currentMetaMaskId = getMetaMaskId();
+    // @ts-ignore
     const metamaskPort = chrome.runtime.connect(currentMetaMaskId);
-    console.log("PortDuplexStream", PortDuplexStream);
     const pluginStream = new PortDuplexStream(metamaskPort);
     provider = new MetaMaskInpageProvider(pluginStream);
  } catch (e) {
-    console.dir(`Metamask connect error `, e)
     return null;
   }
   return provider
 }
 
-const getProvider = () => {
+function getProvider() {
     // @ts-ignore
-    console.log("getProvider", window.ethereum);
-        // @ts-ignore
     if (window.ethereum) {
-        console.log('found window.ethereum>>');
         // @ts-ignore
         return window.ethereum;
     } else {
-        console.log("getInPageProvider");
         const provider = getInPageProvider();
     
         if (provider == null) {
@@ -194,33 +193,115 @@ const getProvider = () => {
     }
 }
 
-const getAccounts = async (provider: AnyNaptrRecord) => {
-    console.log("getAccounts");
-
-    if (provider) {
-        const [accounts, chainId] = await Promise.all([
-            // @ts-ignore
-            provider.request({
-                method: 'eth_requestAccounts',
-            }),
-            // @ts-ignore
-            provider.request({ method: 'eth_chainId' }),
-        ]);
-
-        if (chain != chainId) {
-            const result = await switchChain(provider);
-            if (!result) {
-                alert("Please switch to Goerli Testnet.");
-                return [];
-            }
-        }
-        return [accounts, chain];
+function getShortHash(hash: string) {
+    if (hash.length < 20) {
+        return hash;
     }
-    return [];
+    return hash.slice(0, 6) + " ... " + hash.slice(hash.length - 4, hash.length);
+}
+
+function getState(callback: any) {
+    // @ts-ignore
+    chrome.storage.local.get(["state"], (opt) => {
+        if (opt && opt.state) {
+            state = opt.state;
+        }
+        callback();
+    });
+}
+
+function getSeparatorColor() {
+    const primaryColumn = document.querySelector('div[data-testid="primaryColumn"]');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(primaryColumn);
+    return compStyles.borderColor;
+}
+
+function getMainColor() {
+    const inp = document.querySelector('form[aria-label="Search"] input');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(inp);
+    return compStyles.color;
+}
+
+function getSecondColor() {
+    const searchIcon = document.querySelector('form[aria-label="Search"] svg');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(searchIcon);
+    return compStyles.color;
+}
+
+function getLinkColor() {
+    const link = document.querySelector('a');
+    // @ts-ignore
+    const compStyles = window.getComputedStyle(link);
+    return compStyles.color;
+}
+
+function setThemeColors() {
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendhorline', getSeparatorColor());
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendsecondcolor', getSecondColor());
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendmaincolor', getMainColor());
+    // @ts-ignore
+    document.querySelector(':root').style.setProperty('--xendlinkcolor', getLinkColor());
+}
+
+function injectStyleList() {
+    const link = document.createElement("link");
+    link.id = "xendExtStyleList";
+    link.href = styleList;
+    link.type = "text/css";
+    link.rel = "stylesheet";
+    link.onload = () => {
+        console.log('load');
+        setThemeColors();
+    };
+    document.getElementsByTagName("head")[0].appendChild(link);
+}
+
+function getPrice(price: any) {
+    let nPrice = price * 1;
+    return nPrice.toFixed(5);
+}
+
+function getTotalPrice(price: any, balance: any) {
+    let nPrice = price * 1;
+    let nBalance = balance * 1;
+    return (nPrice * nBalance).toFixed(5);
+}
+
+function showWalletModal(header: any, body: any) {
+    // @ts-ignore
+    document.querySelector("#walletModalHeaderTxt").innerHTML = header;
+    // @ts-ignore
+    document.querySelector("#walletModalMainTxt").innerHTML = body;
+    // @ts-ignore
+    document.querySelector("#walletModal").style.display = "";   
+}
+
+function showBuySellModal(header: any, body: any) {
+    // @ts-ignore
+    document.querySelector("#buySellModalHeaderTxt").innerHTML = header;
+    // @ts-ignore
+    document.querySelector("#buySellModalMainTxt").innerHTML = body;
+    // @ts-ignore
+    document.querySelector("#buySellModal").style.display = "";   
+}
+
+function showSettingModal(header: any, body: any) {
+    // @ts-ignore
+    document.querySelector("#settingModalHeaderTxt").innerHTML = header;
+    // @ts-ignore
+    document.querySelector("#settingModalMainTxt").innerHTML = body;
+    // @ts-ignore
+    document.querySelector("#settingModal").style.display = "";   
 }
 
 // @ts-ignore
-const switchChain = async (provider) => {
+async function switchChainToETH(provider) {
     try {
         // @ts-ignore
         const res = await provider.request({
@@ -265,435 +346,25 @@ const switchChain = async (provider) => {
             console.error("request3: ", error);
         }
     }
-    let res: boolean = await switchChain(provider);
+    let res: boolean = await switchChainToETH(provider);
     return res;
 }
 
-const getShortHash = (hash: string) => {
-    if (hash.length < 20) {
-        return hash;
+async function getAccounts(provider: AnyNaptrRecord) {
+    if (provider) {
+        const [accounts, chainId] = await Promise.all([
+            // @ts-ignore
+            provider.request({
+                method: 'eth_requestAccounts',
+            }),
+            // @ts-ignore
+            provider.request({ method: 'eth_chainId' }),
+        ]);
+        return [accounts, chainId];
     }
-    return hash.slice(0, 6) + " ... " + hash.slice(hash.length - 4, hash.length);
+    return [];
 }
-
-const traverseAndFindAttribute = (node: any, tagName: string): any => {
-    let nodes = []
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      if (node.tagName.toLowerCase() === tagName && node.getElementsByTagName('a').length > 0
-          && node.getAttribute('xend') !== 'send'
-          && node.getAttribute('xend') !== 'feed'
-          && node.getAttribute('xend') !== 'login'
-          && node.getAttribute('xend') !== 'wallet'
-          && node.getAttribute('xend') !== 'dashboard'
-          && node.getAttribute('xend') !== 'profile'
-          && node.getAttribute('xend') !== 'settings'
-      ) {
-        if (node.parentElement.parentElement.parentElement.children.length > 1) {
-            console.log('aside found');
-            console.log(node)
-            // @ts-ignore
-            nodes.push(node)
-        }
-      }
-      const attribute = node.getAttribute('data-testid');
-
-      if (attribute === 'UserProfileSchema-test') {
-        console.log("profile schema test");
-        const xendSend = document.querySelector('[xend="send"]')
-        if (xendSend) {
-            const author = JSON.parse(node.innerHTML).author;
-            console.log("author", author);
-            const uid = author.identifier;
-            console.log('mutationobserver', uid);
-            xendSend.getElementsByTagName('span')[0].innerText = `@${author.additionalName}`;
-            xendSend.parentElement!.parentElement!.style.display = '';
-        }
-      } else {
-        const user = document.querySelector('[data-testid="UserProfileSchema-test"]') 
-        const xendSend = document.querySelector('[xend="send"]');
-        if (!user && xendSend) { 
-            xendSend.parentElement!.parentElement!.style.display = 'none';
-        }
-      }
-    }
-
-    for (const child of node.childNodes) {
-      nodes = nodes.concat(traverseAndFindAttribute(child, tagName))
-    }
-    return nodes;
-}
-
-
-function getState(callback: any) {
-    chrome.storage.local.get(["state"], (opt) => {
-        if (opt && opt.state) {
-            state = opt.state;
-        }
-        callback();
-    });
-}
-
-function injectStyleList() {
-    const link = document.createElement("link");
-    link.id = "xendExtStyleList";
-    link.href = styleList;
-    link.type = "text/css";
-    link.rel = "stylesheet";
-    link.onload = () => {
-        console.log('load');
-        setThemeColors();
-    };
-    document.getElementsByTagName("head")[0].appendChild(link);
-}
-
-async function login() {
-    console.log("login");
-  
-    // @ts-ignore
-    if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
-        // @ts-ignore
-        document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
-        return;
-    }
-    
-    port.postMessage({task: "startTwitterAuth"});
-    port.onMessage.addListener(function(msg: any) {
-        if (msg.result === "successTwitterAuth") {
-            console.log("successTwitterAuth: ", msg.token, msg.secret);
-            state.authorized = true;
-            state.token = msg.token;
-            state.secret = msg.secret;
-            state.user.address = msg.address;
-            state.user.uid = msg.uid;
-            state.user.avatar = msg.pfp;
-            state.user.name = msg.handle;
-
-            console.log("setUserInfo", state.user.avatar, state.user.name);
-            // @ts-ignore
-            document.getElementById("xend-ext-settings-avatar").src = state.user.avatar;
-            // @ts-ignore
-            document.getElementById("xend-ext-settings-user").innerHTML = state.user.name;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-avatar").src = state.user.avatar;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-user").innerHTML = state.user.name;
-            // @ts-ignore
-            document.getElementById("xend-ext-wallet-avatar").src = state.user.avatar;
-            // @ts-ignore
-            document.getElementById("xend-ext-wallet-user").innerHTML = state.user.name;
-            // @ts-ignore
-            document.getElementById("xend-ext-signup-avatar").src = state.user.avatar;
-            // @ts-ignore
-            document.getElementById("xend-ext-signup-user").innerHTML = state.user.name;
-            // @ts-ignore
-            document.getElementById("xend-ext-dashboard-setting-avatar").src = state.user.avatar;
-            // @ts-ignore
-            document.getElementById("xend-ext-dashboard-keys-avatar").src = state.user.avatar;
-
-            chrome.storage.local.set({
-                state: state
-            });
-
-            // @ts-ignore
-            if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
-                // @ts-ignore
-                document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
-                // @ts-ignore
-                document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
-            }
-        }
-    });
-}
-
-function getSeparatorColor() {
-    const primaryColumn = document.querySelector('div[data-testid="primaryColumn"]');
-    // @ts-ignore
-    const compStyles = window.getComputedStyle(primaryColumn);
-    return compStyles.borderColor;
-}
-
-function getMainColor() {
-    const inp = document.querySelector('form[aria-label="Search"] input');
-    // @ts-ignore
-    const compStyles = window.getComputedStyle(inp);
-    return compStyles.color;
-}
-
-function getSecondColor() {
-    const searchIcon = document.querySelector('form[aria-label="Search"] svg');
-    // @ts-ignore
-    const compStyles = window.getComputedStyle(searchIcon);
-    return compStyles.color;
-}
-
-function getLinkColor() {
-    const link = document.querySelector('a');
-    // @ts-ignore
-    const compStyles = window.getComputedStyle(link);
-    return compStyles.color;
-}
-
-function setThemeColors() {
-    // @ts-ignore
-    document.querySelector(':root').style.setProperty('--xendhorline', getSeparatorColor());
-    // @ts-ignore
-    document.querySelector(':root').style.setProperty('--xendsecondcolor', getSecondColor());
-    // @ts-ignore
-    document.querySelector(':root').style.setProperty('--xendmaincolor', getMainColor());
-    // @ts-ignore
-    document.querySelector(':root').style.setProperty('--xendlinkcolor', getLinkColor());
-}
-
-const connectWalletFunc = async () => {
-    let provider = getProvider();
-    try {
-        //@ts-ignore
-        const [accounts, chainId] = await getAccounts(provider);
-        if (accounts && chainId) {
-            const account = getNormalizeAddress(accounts);
-            
-            if (state.user.address != null) {
-                if (state.user.address.toLowerCase() != account.toLowerCase()) {
-                    showWalletModal("Wrong Wallet.", `Connect your paired XEND wallet, ${getShortHash(state.user.address)} to continue.`);
-                    return {
-                        result: false
-                    };
-                }
-            }
-            if (chainId != chain) {
-                return {
-                    result: false
-                }
-            }
-            web3 = new Web3(provider);
-
-            // @ts-ignore
-            contract = new web3.eth.Contract(abi, address);
-
-            return {
-                result: true,
-                address: account
-            };
-        } else {
-            showWalletModal("Alert", "Please connect wallet.");
-        }
-    } catch (error) {
-        console.log("error while connect", error);
-    }
-    return {
-        result: false
-    };
-}
-
-async function connectWallet() {
-    console.log("connectWallet");
-
-    const res = await connectWalletFunc();
-    if (!res.result) {
-        return;
-    }
-    state.walletConnected = true;
-    chrome.storage.local.set({
-        state: state
-    });
-
-    currentWalletAddress = res.address;
-    if (state.authorized && state.walletConnected && state.signedUp) {
-        if (
-            document.querySelector('aside[xend="dashboard"]')
-            // @ts-ignore
-            && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
-        ) {
-            // @ts-ignore
-            document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
-            console.log("Connect Wallet->Dashboard Without SignUp");
-            await checkURL(false);
-            // @ts-ignore
-            document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
-        }
-    } else {
-        const provider = new ethers.providers.Web3Provider(getProvider());
-
-        signer = provider.getSigner();
-        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
-        xendContract = new ethers.Contract(address, abi, provider);
-
-        try {
-            const result = await xendContract.connect(signer)["getCreatorSignUpStatus"](currentWalletAddress);
-            if (!result) {
-                if (state.authorized && state.walletConnected
-                    && document.querySelector('aside[xend="signup"]')
-                    // @ts-ignore
-                    && document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display == "none"
-                ) {
-                    // @ts-ignore
-                    document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
-                    // @ts-ignore
-                    document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "";
-                }
-            } else {
-                state.signedUp = true;
-                chrome.storage.local.set({
-                    state: state
-                });
-                // @ts-ignore
-                document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
-                console.log("Connect Wallet->Dashboard");
-                await checkURL(false);
-                // @ts-ignore
-                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
-            }
-        } catch (error: any) {
-            console.log("getCreatorSignUpStatus", error);
-            return;
-        }
-    }
-}
-
-// @ts-ignore
-async function successSignup(signature, message) {
-    port.postMessage({
-        task: "setWalletAddr",
-        address: currentWalletAddress,
-        uid: state.user.uid,
-        token: state.token,
-        secret: state.secret,
-        signature: signature,
-        message: message
-    });
-    port.onMessage.addListener(async function(msg: any) {
-        if (msg.result === "statusWalletSet") {
-            console.log("statusWalletSet: ", msg.result);
-            if (msg.status) {
-                state.user.address = currentWalletAddress;
-                state.signedUp = true;
-
-                chrome.storage.local.set({
-                    state: state
-            
-                });
-            
-                if (state.authorized && state.walletConnected && state.signedUp
-                    && document.querySelector('aside[xend="dashboard"]')
-                    // @ts-ignore
-                    && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
-                ) {
-                    // @ts-ignore
-                    document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
-                    await checkURL(false);
-                    // @ts-ignore
-                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
-                    return;
-                }                
-            }
-        }
-    });
-}
-// 
-async function signUp() {
-    if (state.authorized && state.walletConnected && state.signedUp
-        && document.querySelector('aside[xend="dashboard"]')
-        // @ts-ignore
-        && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
-    ) {
-        // @ts-ignore
-        document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
-        // @ts-ignore
-        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
-        return;
-    }   
-
-    // @ts-ignore
-    let referrer = document.getElementById("xend-ext-signup-referrer-name").value;
-    
-    const prov = getProvider();
-    const provider = new ethers.providers.Web3Provider(prov);
-
-    signer = provider.getSigner();
-    subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
-    xendContract = new ethers.Contract(address, abi, provider);
-
-    let message = `Hello, This is ${state.user.name}`;
-    const signature = await signMessage(message, prov, signer);
-    if (signature == null) {
-        alert("Please Sign.");
-        return;
-    }
-
-    if (referrer == "") {
-        console.log("referrer1: ", referrer);
-
-        try {
-            const result = await xendContract.connect(signer)["signUp"]([]);
-            console.log(result);
-            if (!result.hash) {
-                return;
-            }
-            // @ts-ignore
-            result.wait().then(res => {
-                successSignup(signature, message);
-            });
-        } catch (error: any) {
-            console.log("signUpError", error.error);
-            if (error.error.message == "execution reverted: User is already signed up") {
-                state.signedUp = true;
-
-                chrome.storage.local.set({
-                    state: state
-            
-                });
-            
-                // @ts-ignore
-                document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
-                await checkURL(false);
-                // @ts-ignore
-                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";      
-            }
-            return;
-        }
-    } else {
-        console.log("referrer2: ", referrer);
-        if (!validateMetamaskAddress(referrer)) {
-            console.log("referrer3: ", referrer);
-            // @ts-ignore
-            document.getElementById("xend-ext-signup-referrer-alert").innerHTML = "Invalid Wallet Address!";
-            return;
-        }
-        console.log("referrer4: ", referrer);
-
-        try {
-            const result = await xendContract.connect(signer)["signUpWithReferral"](referrer);
-            console.log(result);
-            if (!result.hash) {
-                return;
-            }
-            // @ts-ignore
-            result.wait().then(res => {
-                successSignup(signature, message);
-            });
-        } catch (error: any) {
-            console.log("signUpError", error.error);
-            if (error.error.message == "execution reverted: User is already signed up") {
-                state.signedUp = true;
-
-                chrome.storage.local.set({
-                    state: state
-            
-                });
-            
-                // @ts-ignore
-                document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
-                await checkURL(false);
-                // @ts-ignore
-                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = ""; 
-            }
-            return;
-        }
-    }   
-}
-
+//////////////////////////////////////////////////////////////////  
 function logout() {
     // @ts-ignore
     if (state.file != "") {
@@ -707,9 +378,8 @@ function logout() {
         document.getElementById('removeFile').style.visibility = "hidden";
     }
 
-    chrome.storage.local.set({
-        state: ""
-    });
+    // @ts-ignore
+    chrome.storage.local.set({ state: "" });
     
     web3 = null;
     walletProvider = null;
@@ -820,17 +490,6 @@ function getFeed(data: any) {
     return items.join("");
 }
 
-const getPrice = (price: any) => {
-    let nPrice = price * 1;
-    return nPrice.toFixed(5);
-}
-
-const getTotalPrice = (price: any, balance: any) => {
-    let nPrice = price * 1;
-    let nBalance = balance * 1;
-    return (nPrice * nBalance).toFixed(5);
-}
-
 function getKeyArray(data: any) {
     let content = "";
 
@@ -857,6 +516,7 @@ function getKeyArray(data: any) {
   }
   return content;
 }
+
 function getKeys(container: any, data: any) {
     let content = 
         `<div class="xend-ext-dashboard-keys">
@@ -895,6 +555,695 @@ function getKeys(container: any, data: any) {
   content += '<div id="xend-ext-keys-loader">&nbsp;</div> </div>';
 
   return content;
+}
+//////////////////////////////////////////////////////////////////  APIs
+async function setWalletAddr(msg: any) {
+    try {
+        const params = { 
+            address: msg.address, 
+            uid: msg.uid,
+            signature: msg.signature,
+            message: msg.message,
+            token: msg.token,
+            secret: msg.secret 
+        };
+        const res = await (await fetch(`http://82.180.136.36:3001/backend/user/set_address`, {
+            method: 'POST',
+            body: JSON.stringify(params),
+            headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+        })).json();
+
+        console.log("setWalletAddr: ", res);
+
+        if (res.result != undefined) {
+            return {
+                result: "statusWalletSet", 
+                status: true
+            };
+        } else {
+            return {
+                result: "statusWalletSet", 
+                status: false
+            };
+        }
+    } catch(error) {
+        console.log("setWalletAddr2", error);
+    }
+    return {
+        result: "error"
+    }
+}
+
+async function postArticle(msg: any) {
+    console.log("postArticle", msg);
+    const data = {
+        image: msg.image,
+        content: msg.content,
+        uid: msg.uid,
+        token: msg.token,
+        secret: msg.secret,
+        type: msg.type,
+        range: msg.range
+    };
+    const result = await (await fetch(`http://82.180.136.36:3001/backend/user/post_article`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+    })).json();
+
+    return {
+        result: "successPostArticle", 
+        articles: result.articles,
+        count: result.count,
+        start: result.start
+    };    
+}
+
+async function postComment(msg: any) {
+    console.log("postComment", msg);
+    const data = {
+        postID: msg.postID,
+        content: msg.content,
+        token: msg.token,
+        secret: msg.secret,
+        uid: msg.uid,
+        articlePosterUID: msg.articlePosterUID,
+        start: msg.start,
+        num: msg.num
+    };
+    const result = await (await fetch(`http://82.180.136.36:3001/backend/user/post_comment`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+    })).json();
+
+    return {
+        result: "postComment", 
+        articles: result.articles
+    };    
+}
+
+async function openProfilePage(msg: any) {
+    try {
+        const result = await (await fetch(`http://82.180.136.36:3001/backend/user/get_article_count?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
+        let articles = [];
+        if (result.count > 0) {
+            let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_articles_by_uid?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${0}&num=${msg.range}`)).json();
+            console.log(res);
+            articles = res.data;
+        }
+
+        return {
+            result: "setArticleCount", 
+            count: result.count,
+            articles
+        };
+    } catch (error) {
+        console.log("openProfilePage", error);
+    }
+    return {
+        result: "setArticleCount", 
+        count: 0,
+        articles: []
+    };
+}
+
+async function getNextArticlesPage(msg: any) {
+    let articles = [];
+    try {
+        let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_articles_by_uid?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${msg.start}&num=${msg.range}`)).json();
+        console.log(res);
+        articles = res.data;
+    } catch (error) {
+        articles = [];
+    }
+    return {
+        result: "setNextArticlesPage",
+        articles
+    };
+}
+
+async function deleteArticle(msg: any) {
+    try {
+        console.log("deleteArticle", msg);
+        const data = {
+            postID: msg.postID,
+            uid: msg.uid,
+            token: msg.token,
+            secret: msg.secret,
+            articlePosterUID: msg.articlePosterUID,
+            start: msg.start,
+            num: msg.num
+        };
+        const result = await (await fetch(`http://82.180.136.36:3001/backend/user/delete_article`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+        })).json();
+
+        if (result.status) {
+            return {
+                result: "successDeleteArticle", 
+                start: result.start,
+                articles: result.articles,
+                count: result.count
+            };
+        }
+        console.log(result);
+    } catch (error) {
+        console.log("deleteArticle", error);
+    }
+    return {
+        result: "error"
+    };
+}
+
+async function getMyKeys(msg: any) {
+    let data;
+    try {
+        console.log("getMyKeys", msg);
+        data = await (await fetch(`http://82.180.136.36:3001/backend/user/get_my_keys?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
+        console.log("getMyKeys", data);
+    } catch (error) {
+        console.log("getMyKeys", error);
+    }
+    return {
+        result: "successGetMyKeys", 
+        holderNum: "0", 
+        keyBalance: "0", 
+        priceInETH: "0", 
+        totalPrice: "0", 
+        myKeys: []
+    };
+}
+
+async function getKeyInfo(msg: any) {
+    let res;
+    try {
+        console.log("getKeyInfo", msg);
+        res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_key_detail?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&keyOwnerName=${msg.keyOwnerName}`)).json();
+        console.log("getKeyInfo", res);
+    } catch (error) {
+        console.log("getKeyInfo", error);
+        res = {
+            result: "error",
+            data: {}
+        };
+    }
+    return {
+        result: "successGetKeyInfo", 
+        data: res
+    };
+}
+
+async function setFriendTechCompatibility(msg: any) {
+    try {
+        console.log("deleteArticle", msg);
+        const data = {
+            isCompatible: msg.isCompatible,
+            uid: msg.uid,
+            token: msg.token,
+            secret: msg.secret
+        };
+        const result = await (await fetch(`http://82.180.136.36:3001/backend/user/set_compatibility`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+        })).json();
+
+        if (result.result == "success") {
+            return {
+                result: "successSetCompatibility", 
+                status: true
+            };
+        } else {
+            return {
+                result: "successSetCompatibility", 
+                status: false
+            };
+        }
+    } catch (error) {
+        console.log("setCompatibility", error);
+    }
+    return {
+        result: "error"
+    }
+}
+
+async function getCompatibility(msg: any) {
+    try {
+        console.log("getCompatibility", msg);
+        let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_compatibility?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
+        let value = false;
+        if (res.result == "success") {
+            value = res.value;
+        }
+        console.log("getCompatibility: ", res);
+        return {
+            result: "successGetCompatibility", 
+            isCompatibility: value
+        };
+    } catch (error) {
+        console.log("getCompatibility", error);
+    }
+    return {
+        result: "successGetCompatibility", 
+        isCompatibility: false
+    };
+}
+
+async function getFeeds(msg: any) {
+    try {
+        console.log("getFeeds", msg);
+        let res = await (await fetch(`http://82.180.136.36:3001/backend/user/get_feeds?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}&start=${msg.start}&num=${msg.num}`)).json();
+        return {
+            result: "successGetFeeds", 
+            count: res.count,
+            results: res.result
+        };
+    } catch (error) {
+        console.log(error);
+
+    }        
+    return {
+        result: "error"
+    };
+}
+
+async function postFeedComment(msg: any) {
+    console.log("postFeedComment", msg);
+    const data = {
+        postID: msg.postID,
+        content: msg.content,
+        token: msg.token,
+        secret: msg.secret,
+        uid: msg.uid,
+        articlePosterUID: msg.articlePosterUID,
+        start: msg.start,
+        num: msg.num
+    };
+    const result = await (await fetch(`http://82.180.136.36:3001/backend/user/post_comment_feed`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json','Accept':'application/json'}
+    })).json();
+
+    return {
+        result: "successPostFeedComment", 
+        articles: result.articles
+    };    
+}
+
+async function getFriendTechInfo(msg: any) {
+    try {
+        console.log("getFeeds", msg);
+        let res = await (await fetch(`https://prod-api.kosetto.com/twitter-users/${msg.name}`)).json();
+        if (msg.address != null) {
+            let holders = await (await fetch(`https://prod-api.kosetto.com/users/${msg.address.toLowerCase()}/token/holders`)).json();
+            let balance = 0;
+            for (let i = 0; i < holders.users.length; i++) {
+                if (msg.name == holders.users[i].twitterUsername) {
+                    balance = holders.users[i].balance;
+                }
+            }
+            return {
+                result: "successGetFriendTechInfo", 
+                ...res,
+                balance
+            };
+        } else {
+            return {
+                result: "successGetFriendTechInfo", 
+                ...res
+            };
+        }
+    } catch (error) {
+        console.log(error);
+    }
+    return {
+        result: "error"
+    };
+}
+//////////////////////////////////////////////////////////////////
+function traverseAndFindAttribute(node: any, tagName: string):any {
+    let nodes = []
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName.toLowerCase() === tagName && node.getElementsByTagName('a').length > 0
+          && node.getAttribute('xend') !== 'send'
+          && node.getAttribute('xend') !== 'feed'
+          && node.getAttribute('xend') !== 'login'
+          && node.getAttribute('xend') !== 'wallet'
+          && node.getAttribute('xend') !== 'dashboard'
+          && node.getAttribute('xend') !== 'profile'
+          && node.getAttribute('xend') !== 'settings'
+      ) {
+        if (node.parentElement.parentElement.parentElement.children.length > 1) {
+            console.log('aside found');
+            console.log(node)
+            // @ts-ignore
+            nodes.push(node)
+        }
+      }
+      const attribute = node.getAttribute('data-testid');
+
+      if (attribute === 'UserProfileSchema-test') {
+        console.log("profile schema test");
+        const xendSend = document.querySelector('[xend="send"]')
+        if (xendSend) {
+            const author = JSON.parse(node.innerHTML).author;
+            console.log("author", author);
+            const uid = author.identifier;
+            console.log('mutationobserver', uid);
+            xendSend.getElementsByTagName('span')[0].innerText = `@${author.additionalName}`;
+            xendSend.parentElement!.parentElement!.style.display = '';
+        }
+      } else {
+        const user = document.querySelector('[data-testid="UserProfileSchema-test"]') 
+        const xendSend = document.querySelector('[xend="send"]');
+        if (!user && xendSend) { 
+            xendSend.parentElement!.parentElement!.style.display = 'none';
+        }
+      }
+    }
+
+    for (const child of node.childNodes) {
+      nodes = nodes.concat(traverseAndFindAttribute(child, tagName))
+    }
+    return nodes;
+}
+
+async function login() {
+    console.log("login");
+  
+    // @ts-ignore
+    if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
+        // @ts-ignore
+        document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
+        return;
+    }
+
+    // @ts-ignore
+    var port = chrome.runtime.connect({name: "authorize"});
+    port.postMessage({task: "startTwitterAuth"});
+    port.onMessage.addListener(function(msg: any) {
+        if (msg.result === "successTwitterAuth") {
+            console.log("successTwitterAuth: ", msg.token, msg.secret);
+            state.authorized = true;
+            state.token = msg.token;
+            state.secret = msg.secret;
+            state.user.address = msg.address;
+            state.user.uid = msg.uid;
+            state.user.avatar = msg.pfp;
+            state.user.name = msg.handle;
+
+            console.log("setUserInfo", state.user.avatar, state.user.name);
+            // @ts-ignore
+            document.getElementById("xend-ext-settings-avatar").src = state.user.avatar;
+            // @ts-ignore
+            document.getElementById("xend-ext-settings-user").innerHTML = state.user.name;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-avatar").src = state.user.avatar;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-user").innerHTML = state.user.name;
+            // @ts-ignore
+            document.getElementById("xend-ext-wallet-avatar").src = state.user.avatar;
+            // @ts-ignore
+            document.getElementById("xend-ext-wallet-user").innerHTML = state.user.name;
+            // @ts-ignore
+            document.getElementById("xend-ext-signup-avatar").src = state.user.avatar;
+            // @ts-ignore
+            document.getElementById("xend-ext-signup-user").innerHTML = state.user.name;
+            // @ts-ignore
+            document.getElementById("xend-ext-dashboard-setting-avatar").src = state.user.avatar;
+            // @ts-ignore
+            document.getElementById("xend-ext-dashboard-keys-avatar").src = state.user.avatar;
+
+            // @ts-ignore
+            chrome.storage.local.set({ state });
+
+            // @ts-ignore
+            if (state.authorized && document.querySelector('aside[xend="wallet"]') && document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display == "none") {
+                // @ts-ignore
+                document.querySelector('aside[xend="login"]').parentNode.parentNode.style.display = "none";
+                // @ts-ignore
+                document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "";
+            }
+        }
+    });
+}
+
+async function connectWalletFunc() {
+    let provider = getProvider();
+    try {
+        //@ts-ignore
+        const [accounts, chainId] = await getAccounts(provider);
+        
+        if (chain != chainId) {
+            const result = await switchChainToETH(provider);
+            if (!result) {
+                showWalletModal("Alert", "Please switch to Goerli Testnet.");
+                return;
+            }
+        }
+
+        if (accounts && chainId) {
+            const account = getNormalizeAddress(accounts);
+            
+            if (state.user.address != null) {
+                if (state.user.address.toLowerCase() != account.toLowerCase()) {
+                    showWalletModal("Wrong Wallet.", `Connect your paired XEND wallet, ${getShortHash(state.user.address)} to continue.`);
+                    return {
+                        result: false
+                    };
+                }
+            }
+            if (chainId != chain) {
+                return {
+                    result: false
+                }
+            }
+            web3 = new Web3(provider);
+
+            // @ts-ignore
+            contract = new web3.eth.Contract(abi, address);
+
+            return {
+                result: true,
+                address: account
+            };
+        } else {
+            showWalletModal("Alert", "Please connect wallet.");
+        }
+    } catch (error) {
+        console.log("error while connect", error);
+    }
+    return {
+        result: false
+    };
+}
+
+async function connectWallet() {
+    console.log("connectWallet");
+
+    const res = await connectWalletFunc();
+    // @ts-ignore
+    if (!res.result) {
+        return;
+    }
+    state.walletConnected = true;
+
+    // @ts-ignore
+    chrome.storage.local.set({ state: state });
+    // @ts-ignore
+    currentWalletAddress = res.address;
+    if (state.authorized && state.walletConnected && state.signedUp) {
+        if (
+            document.querySelector('aside[xend="dashboard"]')
+            // @ts-ignore
+            && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
+        ) {
+            // @ts-ignore
+            document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+            console.log("Connect Wallet->Dashboard Without SignUp");
+            await checkURL(false);
+            // @ts-ignore
+            document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+        }
+    } else {
+        const provider = new ethers.providers.Web3Provider(getProvider());
+
+        signer = provider.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+        xendContract = new ethers.Contract(address, abi, provider);
+
+        try {
+            const result = await xendContract.connect(signer)["getCreatorSignUpStatus"](currentWalletAddress);
+            if (!result) {
+                if (state.authorized && state.walletConnected
+                    && document.querySelector('aside[xend="signup"]')
+                    // @ts-ignore
+                    && document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display == "none"
+                ) {
+                    // @ts-ignore
+                    document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+                    // @ts-ignore
+                    document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "";
+                }
+            } else {
+                state.signedUp = true;
+
+                // @ts-ignore
+                chrome.storage.local.set({ state: state });
+
+                // @ts-ignore
+                document.querySelector('aside[xend="wallet"]').parentNode.parentNode.style.display = "none";
+                console.log("Connect Wallet->Dashboard");
+                await checkURL(false);
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+            }
+        } catch (error: any) {
+            console.log("getCreatorSignUpStatus", error);
+            return;
+        }
+    }
+}
+
+// @ts-ignore
+async function successSignup(signature, message) {
+    let msg = await setWalletAddr({
+        task: "setWalletAddr",
+        address: currentWalletAddress,
+        uid: state.user.uid,
+        token: state.token,
+        secret: state.secret,
+        signature: signature,
+        message: message
+    });
+
+    if (msg.result === "statusWalletSet") {
+        console.log("statusWalletSet: ", msg.result);
+        if (msg.status) {
+            state.user.address = currentWalletAddress;
+            state.signedUp = true;
+
+            // @ts-ignore
+            chrome.storage.local.set({ state: state });
+        
+            if (state.authorized && state.walletConnected && state.signedUp
+                && document.querySelector('aside[xend="dashboard"]')
+                // @ts-ignore
+                && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
+            ) {
+                // @ts-ignore
+                document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+                await checkURL(false);
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+                return;
+            }                
+        }
+    }
+}
+
+async function signUp() {
+    if (state.authorized && state.walletConnected && state.signedUp
+        && document.querySelector('aside[xend="dashboard"]')
+        // @ts-ignore
+        && document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display == "none"
+    ) {
+        // @ts-ignore
+        document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+        // @ts-ignore
+        document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+        return;
+    }   
+
+    // @ts-ignore
+    let referrer = document.getElementById("xend-ext-signup-referrer-name").value;
+    
+    const prov = getProvider();
+    const provider = new ethers.providers.Web3Provider(prov);
+
+    signer = provider.getSigner();
+    subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+    xendContract = new ethers.Contract(address, abi, provider);
+
+    let message = `Hello, This is ${state.user.name}`;
+    const signature = await signMessage(message, signer);
+    if (signature == null) {
+        alert("Please Sign.");
+        return;
+    }
+
+    if (referrer == "") {
+        console.log("referrer1: ", referrer);
+
+        try {
+            const result = await xendContract.connect(signer)["signUp"]([]);
+            console.log(result);
+            if (!result.hash) {
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                successSignup(signature, message);
+            });
+        } catch (error: any) {
+            console.log("signUpError", error.error);
+            if (error.error.message == "execution reverted: User is already signed up") {
+                state.signedUp = true;
+
+                // @ts-ignore
+                chrome.storage.local.set({ state: state });
+            
+                // @ts-ignore
+                document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+                await checkURL(false);
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";      
+            }
+            return;
+        }
+    } else {
+        console.log("referrer2: ", referrer);
+        if (!validateMetamaskAddress(referrer)) {
+            console.log("referrer3: ", referrer);
+            // @ts-ignore
+            document.getElementById("xend-ext-signup-referrer-alert").innerHTML = "Invalid Wallet Address!";
+            return;
+        }
+        console.log("referrer4: ", referrer);
+
+        try {
+            const result = await xendContract.connect(signer)["signUpWithReferral"](referrer);
+            console.log(result);
+            if (!result.hash) {
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                successSignup(signature, message);
+            });
+        } catch (error: any) {
+            console.log("signUpError", error.error);
+            if (error.error.message == "execution reverted: User is already signed up") {
+                state.signedUp = true;
+
+                // @ts-ignore
+                chrome.storage.local.set({ state });
+            
+                // @ts-ignore
+                document.querySelector('aside[xend="signup"]').parentNode.parentNode.style.display = "none";
+                await checkURL(false);
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = ""; 
+            }
+            return;
+        }
+    }   
 }
 
 function getArticles(container: any, articles: { uid: string; comments: ({ author: string; authorUID: string; postID: string; message: string } | { author: string; message: string })[]; imageUrl: string; postID: string; message: string; timestamp: number }[]) {
@@ -937,6 +1286,694 @@ function getArticles(container: any, articles: { uid: string; comments: ({ autho
     return items.join("");
 }
 
+async function updateFeedPage() {
+    console.log("updateFeedPage", state.user.uid);
+
+    let msg = await getFeeds({
+        task: "getFeeds",
+        uid: state.user.uid,
+        token: state.token,
+        secret: state.secret,
+        start: 0,
+        num: state.user.feedPageSize
+    });
+
+    if (msg.result === "successGetFeeds") {
+        state.user.feedCount = msg.count;
+        state.feed = msg.results;
+
+        console.log("successGetFeeds", msg.results);
+
+        // @ts-ignore
+        chrome.storage.local.set({ state });
+        // @ts-ignore
+        document.getElementById("xend-ext-dashboard-profile-feeds").innerHTML = getFeed(msg.results) + `<div id="xend-ext-feed-loader">&nbsp;</div>`;
+
+        // @ts-ignore
+        document.querySelectorAll(".xend-ext-feedcomment input").forEach(el => {
+            const checkInput = () => {
+                // @ts-ignore
+                el.nextElementSibling.style.visibility = el.value.trim() === "" ? "hidden" : "visible";
+            };
+            el.addEventListener("input", checkInput);
+            el.addEventListener("change", checkInput);
+            el.addEventListener("post", checkInput);
+            el.addEventListener("focus", checkInput);
+        });
+
+        // @ts-ignore
+        document.querySelectorAll(".xend-ext-feedcomment a").forEach(el => {
+            el.addEventListener("click", async (e: any) => {
+                e.preventDefault();
+
+                console.log("Feed Comment Post");
+                // @ts-ignore
+                const content = e.target.previousElementSibling.value.trim();
+                // @ts-ignore
+                const pid = e.target.dataset.pid;
+                // @ts-ignore
+                const uid = e.target.dataset.uid;
+                // @ts-ignore
+                let message = await postFeedComment({
+                    task: "postFeedComment",
+                    content: content,
+                    postID: pid,
+                    token: state.token,
+                    secret: state.secret,
+                    articlePosterUID: uid,
+                    uid: state.user.uid,
+                    start: 0,
+                    num: state.feed.length + state.user.feedPageSize
+                });
+    
+                if (message.result === "successPostFeedComment") {
+                    console.log("successPostFeedComment: ", message.articles);
+                    state.feed = message.articles;
+
+                    updateFeedPage();
+        
+                    // @ts-ignore
+                    chrome.storage.local.set({ state });
+                }
+            });
+        });
+
+        // @ts-ignore
+        document.getElementById("xend-ext-dashboard-profile-feeds").addEventListener("scroll", async (e) => {
+            if (!state.loadingFeeds && document.querySelector("#xend-ext-feed-loader")
+                // @ts-ignore
+                && (document.querySelector("#xend-ext-feed-loader").offsetTop <
+                    // @ts-ignore
+                    document.querySelector("#xend-ext-feed-loader").parentNode.offsetHeight
+                    // @ts-ignore
+                    + document.querySelector("#xend-ext-feed-loader").parentNode.scrollTop)
+            ) {
+                state.loadingFeeds = true;
+                if (state.feed.length == state.user.feedCount) {
+                    state.loadingFeeds = false;
+                    return;
+                }
+                // @ts-ignore
+                const scrollTop = document.querySelector("#xend-ext-dashboard-profile-feeds").scrollTop;
+                const numOfArticles = document.querySelectorAll("#xend-ext-dashboard-profile-feeds .xend-ext-dashboard-row").length;
+
+                // @ts-ignore
+                let message = await getFeeds({
+                    task: "getFeeds",
+                    uid: state.user.uid,
+                    token: state.token,
+                    secret: state.secret,
+                    start: 0,
+                    range: numOfArticles + state.user.feedPageSize
+                });
+
+                if (message.result === "successGetFeeds") {
+                    if (state.feed.length == message.count || message.results.length == 0) {
+                        state.loadingFeeds = false;
+                        return;
+                    }
+                    console.log("successGetFeeds", numOfArticles, message);
+                    state.feed = message.results;
+
+                    // @ts-ignore
+                    const item = getFeed(message.results);
+                    // @ts-ignore
+                    document.querySelector("#xend-ext-feed-loader").innerHTML = item + `<div id="xend-ext-feed-loader">&nbsp;</div>`;
+
+                    // @ts-ignore
+                    document.querySelectorAll(".xend-ext-feedcomment input").forEach(el => {
+                        const checkInput = () => {
+                            // @ts-ignore
+                            el.nextElementSibling.style.visibility = el.value.trim() === "" ? "hidden" : "visible";
+                        };
+                        el.addEventListener("input", checkInput);
+                        el.addEventListener("change", checkInput);
+                        el.addEventListener("post", checkInput);
+                        el.addEventListener("focus", checkInput);
+                    });
+
+                    // @ts-ignore
+                    document.querySelectorAll(".xend-ext-feedcomment a").forEach(el => {
+                        el.addEventListener("click", async (e: any) => {
+                            e.preventDefault();
+
+                            console.log("Feed Comment Post");
+                            // @ts-ignore
+                            const content = e.target.previousElementSibling.value.trim();
+                            // @ts-ignore
+                            const pid = e.target.dataset.pid;
+                            // @ts-ignore
+                            const uid = e.target.dataset.uid;
+                            // @ts-ignore
+                            let result = await postFeedComment({
+                                task: "postFeedComment",
+                                content: content,
+                                postID: pid,
+                                token: state.token,
+                                secret: state.secret,
+                                articlePosterUID: uid,
+                                uid: state.user.uid,
+                                start: state.user.currentRange,
+                                num: state.user.pageSize
+                            });
+            
+                            if (result.result === "successPostFeedComment") {
+                                console.log("successPostFeedComment: ", result.articles);
+                                state.user.articles = result.articles;
+
+                                updateFeedPage();
+                    
+                                // @ts-ignore
+                                chrome.storage.local.set({ state });
+                            }
+                        });
+                    });
+                    // @ts-ignore
+                    document.querySelector("#xend-ext-dashboard-profile-feeds").scrollTop = scrollTop;
+                    state.loadingFeeds = false;
+
+                    // @ts-ignore
+                    chrome.storage.local.set({ state });
+                }
+            }
+        });
+
+        // @ts-ignore
+        document.querySelector('#content-1').classList.add("selected");
+        // @ts-ignore
+        document.querySelector('#content-2').classList.remove("selected");
+        // @ts-ignore
+        document.querySelector('#content-3').classList.remove("selected");
+        // @ts-ignore
+        document.querySelector('#content-4').classList.remove("selected");
+    }
+}
+
+async function updateBuySellPageFriendTech() {
+    let path = window.location.href;
+    const prefix = "https://twitter.com/";
+    path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
+
+    let msg = await getFriendTechInfo({
+        task: "getFriendTechInfo",
+        name: path
+    });
+
+    // @ts-ignore
+    if (msg.result === "successGetFriendTechInfo") {
+        console.log("successGetFriendTechInfo", msg);
+        if (msg.id == null) {
+            return;
+        }
+
+        state.profile.holderNum = msg.holderCount;
+        state.profile.keyBalance = msg.shareSupply;
+        state.profile.priceInETH = Web3.utils.fromWei(msg.displayPrice, "ether");
+        state.profile.keyAddress = msg.address;
+        state.profile.keyAvatar = msg.twitterPfpUrl;
+        state.profile.keyOwnerName = msg.twitterUsername;
+        state.profile.keyId = msg.twitterUserId;
+        state.profile.myKeyBalance = msg.balance;
+
+        const WETHPrice = await getTokenPrice(addrTokenWETH);
+        console.log("updateBuySellPageFriendTech", WETHPrice);
+    
+        let usdprice = "";
+        usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
+        console.log(document.getElementById("xend-ext-menu-usdprice"));
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-ethprice").innerHTML = (state.profile.priceInETH * 1).toFixed(5);
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-usdprice").innerHTML = usdprice;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-avatar").src = state.profile.keyAvatar;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-user").innerHTML = state.profile.keyOwnerName;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-holdernum").innerHTML = state.profile.holderNum;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-sharessupply").innerHTML = state.profile.keyBalance;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-input").addEventListener("change", (e: any) => {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-price").innerHTML = (e.target.value * Number(state.profile.priceInETH)).toFixed(5);
+        });
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-sharesbalance").innerHTML = state.profile.myKeyBalance;
+
+        isPendingBuy = false;
+        isPendingSell = false;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-buy").addEventListener("click", async (e: any) => {
+            if (isPendingBuy && isPendingSell) {
+                return;
+            }
+            isPendingBuy = true;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").disabled = true;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
+            // @ts-ignore
+            let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
+    
+            if (amt <= 0) {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                isPendingBuy = false;
+                showBuySellModal("Alert", "Please input positive value.");
+                return;
+            }
+    
+            const prov = new ethers.providers.Web3Provider(getProvider());
+    
+            signer = prov.getSigner();
+            let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
+
+            try {
+                let price = await friendTechContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
+    
+                const result = await friendTechContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
+                    value: parseInt(price._hex).toString()
+                });
+    
+                if (!result.hash) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    isPendingBuy = false;
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                    return;
+                }
+                // @ts-ignore
+                result.wait().then(res => {
+                    console.log(res);
+                    // @ts-ignore
+                    if (res.status == 1) {
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                        isPendingBuy = false;
+                        setTimeout(() => {
+                            checkURL(false);
+                        }, 1000);
+                    } else {
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                        isPendingBuy = false;
+                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                    }
+                });
+            } catch (error) {
+                console.log("buyKey", error);
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                isPendingBuy = false;
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            }
+        });
+
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-sell").addEventListener("click", async (e: any) => {
+            if (isPendingSell && isPendingBuy) {
+                return;
+            }
+            isPendingSell = true;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").disabled = true;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
+            // @ts-ignore
+            let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
+    
+            if (amt <= 0) {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                isPendingSell = false;
+                showBuySellModal("Alert", "Please input positive value.");
+                return;
+            }
+    
+            const prov = new ethers.providers.Web3Provider(getProvider());
+    
+            signer = prov.getSigner();
+            let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
+
+            try {
+                let price = await friendTechContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
+    
+                const result = await friendTechContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
+                    value: parseInt(price._hex).toString()
+                });
+    
+                if (!result.hash) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    isPendingSell = false;
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                    return;
+                }
+                // @ts-ignore
+                result.wait().then(res => {
+                    console.log(res);
+                    // @ts-ignore
+                    if (res.status == 1) {
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                        isPendingSell = false;
+                        
+                        setTimeout(() => {
+                            checkURL(false);
+                        }, 1000);
+                    } else {
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                        // @ts-ignore
+                        document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                        isPendingSell = false;
+                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                    }
+                });
+            } catch (error) {
+                console.log("sellKey", error);
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                isPendingSell = false;
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            }
+        });
+
+        // @ts-ignore
+        chrome.storage.local.set({ state });
+
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-up-trend-wrapper").style.display = "none";
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-premium-btn").disabled = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-premium-btn-text").text = "Disabled";
+    }
+}
+
+const updateBuySellPageXend = async () => {
+    const WETHPrice = await getTokenPrice(addrTokenWETH);
+    console.log("updateBuySellPageXend", WETHPrice);
+
+    let usdprice = "";
+    usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
+    console.log(document.getElementById("xend-ext-menu-usdprice"));
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-ethprice").innerHTML = (state.profile.priceInETH * 1).toFixed(5);
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-usdprice").innerHTML = usdprice;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-avatar").src = state.profile.keyAvatar;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-user").innerHTML = state.profile.keyOwnerName;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-sharesbalance").innerHTML = state.profile.myKeyBalance;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-holdernum").innerHTML = state.profile.holderNum;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-sharessupply").innerHTML = state.profile.keyBalance;
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-up-trend").innerHTML = state.profile.changeRate;
+
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-key-input").addEventListener("change", (e: any) => {
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-price").innerHTML = (e.target.value * Number(state.profile.priceInETH)).toFixed(5);
+    });
+
+    try {
+        const provider = new ethers.providers.Web3Provider(getProvider());
+
+        signer = provider.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+
+        const isEnabled = await subscribeContract.connect(signer)["isMonthlySubscriptionEnabled"](state.profile.keyAddress);
+        console.log("subscribe", isEnabled);
+        state.profile.isSubscriptionEnabled = isEnabled;
+
+        if (isEnabled && state.user.address != state.profile.keyAddress && !state.profile.isSubscribed) {
+            const result = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
+            state.profile.subscribePriceInETH = result;
+            console.log("subscribePrice", result);
+
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn-text").innerHTML = `1 Month • ${state.profile.subscribePriceInETH} ETH`;
+        } else {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn-text").innerHTML = `Disabled`;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").disabled = true;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium").style.opacity = "50% !important";                        
+        }
+
+        // @ts-ignore
+        chrome.storage.local.set({ state });
+    } catch (error: any) {
+        console.log("updateBuySellPageXend", error);
+    }
+
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-premium-btn").addEventListener("click", async (e: any) => {
+        if (isPendingSubscribe) {
+            return;
+        }
+        isPendingSubscribe = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-premium-btn").disabled = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-premium-btn").classList.add("spinner-button-loading");
+
+        const provider = new ethers.providers.Web3Provider(getProvider());
+
+        signer = provider.getSigner();
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+
+        try {
+            const price = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
+            const result = await subscribeContract.connect(signer)["subscribe"](state.profile.keyAddress, {
+                value: parseInt(price._hex).toString()
+            });
+
+            if (!result.hash) {
+                isPendingSubscribe = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                if (res.status) {
+                    isPendingSubscribe = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn-text").text = "Subscribed";
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+                } else {
+                    isPendingSubscribe = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                }
+            });
+        } catch (error) {
+            console.log("subscribeError", error);
+            isPendingSubscribe = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+        }
+    });
+
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-key-buy").addEventListener("click", async (e: any) => {
+        if (isPendingBuy && isPendingSell) {
+            return;
+        }
+        isPendingBuy = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-buy").disabled = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
+        // @ts-ignore
+        let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
+
+        if (amt <= 0) {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+            isPendingBuy = false;
+            showBuySellModal("Alert", "Please input positive value.");
+            return;
+        }
+
+        const prov = new ethers.providers.Web3Provider(getProvider());
+
+        signer = prov.getSigner();
+        xendContract = new ethers.Contract(address, abi, prov);
+
+        try {
+            let price = await xendContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
+
+            const result = await xendContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
+                value: parseInt(price._hex).toString()
+            });
+
+            if (!result.hash) {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                isPendingBuy = false;
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                console.log(res);
+                // @ts-ignore
+                if (res.status == 1) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    isPendingBuy = false;
+                    
+                    setTimeout(() => {
+                        checkURL(false);
+                    }, 1000);
+                } else {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    isPendingBuy = false;
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                }
+            });
+        } catch (error) {
+            console.log("buyKey", error);
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+            isPendingBuy = false;
+            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+        }
+    });
+
+    // @ts-ignore
+    document.getElementById("xend-ext-menu-key-sell").addEventListener("click", async (e: any) => {
+        if (isPendingSell && isPendingBuy) {
+            return;
+        }
+        isPendingSell = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-sell").disabled = true;
+        // @ts-ignore
+        document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
+        // @ts-ignore
+        let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
+
+        if (amt <= 0) {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+            isPendingSell = false;
+            showBuySellModal("Alert", "Please input positive value.");
+            return;
+        }
+
+        const prov = new ethers.providers.Web3Provider(getProvider());
+
+        signer = prov.getSigner();
+        xendContract = new ethers.Contract(address, abi, prov);
+
+        try {
+            let price = await xendContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
+
+            const result = await xendContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
+                value: parseInt(price._hex).toString()
+            });
+
+            if (!result.hash) {
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                // @ts-ignore
+                document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                isPendingSell = false;
+                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                return;
+            }
+            // @ts-ignore
+            result.wait().then(res => {
+                console.log(res);
+                // @ts-ignore
+                if (res.status == 1) {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    isPendingSell = false;
+                   
+                    setTimeout(() => {
+                        checkURL(false);
+                    }, 1000);
+                } else {
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    // @ts-ignore
+                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    isPendingSell = false;
+                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+                }
+            });
+        } catch (error) {
+            console.log("sellKey", error);
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+            isPendingSell = false;
+            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+        }
+    });
+
+    // @ts-ignore
+    chrome.storage.local.set({ state });
+}
+
+//////////////////////////////////////////////////////////////////  
 function createLogin(node: any) {
     console.log("createLogin");
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
@@ -986,15 +2023,6 @@ function createLogin(node: any) {
     container.querySelector("#xend-ext-logo-btn").addEventListener("click", e => {
         login();
     });
-}
-
-const showWalletModal = (header: any, body: any) => {
-    // @ts-ignore
-    document.querySelector("#walletModalHeaderTxt").innerHTML = header;
-    // @ts-ignore
-    document.querySelector("#walletModalMainTxt").innerHTML = body;
-    // @ts-ignore
-    document.querySelector("#walletModal").style.display = "";   
 }
 
 function createWalletConnect(node: any) {
@@ -1119,194 +2147,6 @@ function createSignUp(node: any) {
     });
 }
 
-const updateFeedPage = async () => {
-    console.log("updateFeedPage", state.user.uid);
-
-    port.postMessage({
-        task: "getFeeds",
-        uid: state.user.uid,
-        token: state.token,
-        secret: state.secret,
-        start: 0,
-        num: state.user.feedPageSize
-    });
-
-    port.onMessage.addListener(function(msg) {
-        if (msg.result === "successGetFeeds") {
-            state.user.feedCount = msg.count;
-            state.feed = msg.results;
-
-            console.log("successGetFeeds", msg.results);
-
-            chrome.storage.local.set({ state });
-            // @ts-ignore
-            document.getElementById("xend-ext-dashboard-profile-feeds").innerHTML = getFeed(msg.results) + `<div id="xend-ext-feed-loader">&nbsp;</div>`;
-
-            // @ts-ignore
-            document.querySelectorAll(".xend-ext-feedcomment input").forEach(el => {
-                const checkInput = () => {
-                    // @ts-ignore
-                    el.nextElementSibling.style.visibility = el.value.trim() === "" ? "hidden" : "visible";
-                };
-                el.addEventListener("input", checkInput);
-                el.addEventListener("change", checkInput);
-                el.addEventListener("post", checkInput);
-                el.addEventListener("focus", checkInput);
-            });
-
-            // @ts-ignore
-            document.querySelectorAll(".xend-ext-feedcomment a").forEach(el => {
-                el.addEventListener("click", (e: any) => {
-                    e.preventDefault();
-
-                    console.log("Feed Comment Post");
-                    // @ts-ignore
-                    const content = e.target.previousElementSibling.value.trim();
-                    // @ts-ignore
-                    const pid = e.target.dataset.pid;
-                    // @ts-ignore
-                    const uid = e.target.dataset.uid;
-                    // @ts-ignore
-                    port.postMessage({
-                        task: "postFeedComment",
-                        content: content,
-                        postID: pid,
-                        token: state.token,
-                        secret: state.secret,
-                        articlePosterUID: uid,
-                        uid: state.user.uid,
-                        start: 0,
-                        num: state.feed.length + state.user.feedPageSize
-                    });
-                    port.onMessage.addListener(function(msg) {
-                        if (msg.result === "successPostFeedComment") {
-                            console.log("successPostFeedComment: ", msg.articles);
-                            state.feed = msg.articles;
-
-                            updateFeedPage();
-                
-                            chrome.storage.local.set({
-                                state: state
-                            });
-                        }
-                    });
-                });
-            });
-
-            // @ts-ignore
-            document.getElementById("xend-ext-dashboard-profile-feeds").addEventListener("scroll", e => {
-                if (!state.loadingFeeds && document.querySelector("#xend-ext-feed-loader")
-                    // @ts-ignore
-                    && (document.querySelector("#xend-ext-feed-loader").offsetTop <
-                        // @ts-ignore
-                        document.querySelector("#xend-ext-feed-loader").parentNode.offsetHeight
-                        // @ts-ignore
-                        + document.querySelector("#xend-ext-feed-loader").parentNode.scrollTop)
-                ) {
-                    state.loadingFeeds = true;
-                    if (state.feed.length == state.user.feedCount) {
-                        state.loadingFeeds = false;
-                        return;
-                    }
-                    // @ts-ignore
-                    const scrollTop = document.querySelector("#xend-ext-dashboard-profile-feeds").scrollTop;
-                    const numOfArticles = document.querySelectorAll("#xend-ext-dashboard-profile-feeds .xend-ext-dashboard-row").length;
-
-                    // @ts-ignore
-                    port.postMessage({
-                        task: "getFeeds",
-                        uid: state.user.uid,
-                        token: state.token,
-                        secret: state.secret,
-                        start: 0,
-                        range: numOfArticles + state.user.feedPageSize
-                    });
-
-                    port.onMessage.addListener(function(msg) {
-                        if (msg.result === "successGetFeeds") {
-                            if (state.feed.length == msg.count || msg.results.length == 0) {
-                                state.loadingFeeds = false;
-                                return;
-                            }
-                            console.log("successGetFeeds", numOfArticles, msg);
-                            state.feed = msg.results;
-        
-                            // @ts-ignore
-                            const item = getFeed(msg.results);
-                            // @ts-ignore
-                            document.querySelector("#xend-ext-feed-loader").innerHTML = item + `<div id="xend-ext-feed-loader">&nbsp;</div>`;
-
-                            // @ts-ignore
-                            document.querySelectorAll(".xend-ext-feedcomment input").forEach(el => {
-                                const checkInput = () => {
-                                    // @ts-ignore
-                                    el.nextElementSibling.style.visibility = el.value.trim() === "" ? "hidden" : "visible";
-                                };
-                                el.addEventListener("input", checkInput);
-                                el.addEventListener("change", checkInput);
-                                el.addEventListener("post", checkInput);
-                                el.addEventListener("focus", checkInput);
-                            });
-
-                            // @ts-ignore
-                            document.querySelectorAll(".xend-ext-feedcomment a").forEach(el => {
-                                el.addEventListener("click", (e: any) => {
-                                    e.preventDefault();
-
-                                    console.log("Feed Comment Post");
-                                    // @ts-ignore
-                                    const content = e.target.previousElementSibling.value.trim();
-                                    // @ts-ignore
-                                    const pid = e.target.dataset.pid;
-                                    // @ts-ignore
-                                    const uid = e.target.dataset.uid;
-                                    // @ts-ignore
-                                    port.postMessage({
-                                        task: "postFeedComment",
-                                        content: content,
-                                        postID: pid,
-                                        token: state.token,
-                                        secret: state.secret,
-                                        articlePosterUID: uid,
-                                        uid: state.user.uid,
-                                        start: state.user.currentRange,
-                                        num: state.user.pageSize
-                                    });
-                                    port.onMessage.addListener(function(msg) {
-                                        if (msg.result === "successPostFeedComment") {
-                                            console.log("successPostFeedComment: ", msg.articles);
-                                            state.user.articles = msg.articles;
-
-                                            updateFeedPage();
-                                
-                                            chrome.storage.local.set({
-                                                state: state
-                                            });
-                                        }
-                                    });
-                                });
-                            });
-                            // @ts-ignore
-                            document.querySelector("#xend-ext-dashboard-profile-feeds").scrollTop = scrollTop;
-                            state.loadingFeeds = false;
-                            chrome.storage.local.set({ state });
-                        }
-                    });
-                }
-            });
-
-            // @ts-ignore
-            document.querySelector('#content-1').classList.add("selected");
-            // @ts-ignore
-            document.querySelector('#content-2').classList.remove("selected");
-            // @ts-ignore
-            document.querySelector('#content-3').classList.remove("selected");
-            // @ts-ignore
-            document.querySelector('#content-4').classList.remove("selected");
-        }
-    });
-}
-
 function createDashboard(node: any) {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
@@ -1339,55 +2179,55 @@ function createDashboard(node: any) {
     }
 
     const pageTpl = `
-    <div class="xend-ext-dashboard-header">
-        <div>Dashboard</div>
-        <div class="xend-ext-dashboard-setting">
-            <div id="xend-ext-dashboard-warning" class="tooltip">
-                <span id="xend-ext-dashboard-warningmsg" class="tooltiptext">
-                    Wrong wallet connected on Metamask
-                </span>
+        <div class="xend-ext-dashboard-header">
+            <div>Dashboard</div>
+            <div class="xend-ext-dashboard-setting">
+                <div id="xend-ext-dashboard-warning" class="tooltip">
+                    <span id="xend-ext-dashboard-warningmsg" class="tooltiptext">
+                        Wrong wallet connected on Metamask
+                    </span>
+                </div>
+                <button id="xend-ext-dashboard-settings-btn" title="Settings"><img id="xend-ext-dashboard-setting-avatar" src="${state.user.avatar}" alt="" draggable="false" /></button>
             </div>
-            <button id="xend-ext-dashboard-settings-btn" title="Settings"><img id="xend-ext-dashboard-setting-avatar" src="${state.user.avatar}" alt="" draggable="false" /></button>
         </div>
-    </div>
-    
-<div class="tabs">
-  <div id="content-1" class="selected">
-    <div id="xend-ext-dashboard-profile-feeds">
-        ` + getFeed(state.feed) + `
-        <div id="xend-ext-feed-loader">&nbsp;</div>
-    </div>
-  </div>
+        
+        <div class="tabs">
+        <div id="content-1" class="selected">
+            <div id="xend-ext-dashboard-profile-feeds">
+                ` + getFeed(state.feed) + `
+                <div id="xend-ext-feed-loader">&nbsp;</div>
+            </div>
+        </div>
 
-  <div id="content-2">
-  ` + getKeys(container, { ...state.key, keys: state.keys }) + ` 
-  </div>
+        <div id="content-2">
+        ` + getKeys(container, { ...state.key, keys: state.keys }) + ` 
+        </div>
 
 
-  <div id="content-3">
-    <div class="xend-ext-dashboard-profile">
-        <textarea id="xendExtPostContent">So nice i had to post it twice</textarea>
-        <div class="xend-ext-dashboard-profile-file" title="Upload file"><label title="Add Image"><input id="addFile" type="file" /></label><button title="Remove Image" id="removeFile">&times;</button></div>
-        <button id="xend-ext-dashboard-profile-post">
-            Post
-        </button>
-        <div style="clear: both"></div>
-    </div>
-    <div id="xend-ext-dashboard-profile-articles"> ` + getArticles(container, state.user.articles) + `</div>
-  </div>
-  
-  <div id="content-4">
-  <iframe src="https://www.friend.tech/"></iframe>
-  </div>
-  
-  <div class="tabs__links">
-    <a href="#content-1">Feed</a>
-    <a href="#content-2">Keys</a>
-    <a href="#content-3">Profile</a>
-    <a href="#content-4">FT</a>
-   
-  </div>
-</div>    
+        <div id="content-3">
+            <div class="xend-ext-dashboard-profile">
+                <textarea id="xendExtPostContent">So nice i had to post it twice</textarea>
+                <div class="xend-ext-dashboard-profile-file" title="Upload file"><label title="Add Image"><input id="addFile" type="file" /></label><button title="Remove Image" id="removeFile">&times;</button></div>
+                <button id="xend-ext-dashboard-profile-post">
+                    Post
+                </button>
+                <div style="clear: both"></div>
+            </div>
+            <div id="xend-ext-dashboard-profile-articles"> ` + getArticles(container, state.user.articles) + `</div>
+        </div>
+        
+        <div id="content-4">
+        <iframe src="https://www.friend.tech/"></iframe>
+        </div>
+        
+        <div class="tabs__links">
+            <a href="#content-1">Feed</a>
+            <a href="#content-2">Keys</a>
+            <a href="#content-3">Profile</a>
+            <a href="#content-4">FT</a>
+        
+        </div>
+        </div>    
     `;
     container.innerHTML = pageTpl;
 
@@ -1404,34 +2244,35 @@ function createDashboard(node: any) {
         updateFeedPage();
     });
     // @ts-ignore
-    container.querySelector('a[href="#content-2"]').addEventListener("click", (e) => {
+    container.querySelector('a[href="#content-2"]').addEventListener("click", async (e) => {
         e.preventDefault();
 
         console.log("Show Keys Page");
 
-        port.postMessage({
+        let msg = await getMyKeys({
             task: "getMyKeys",
             uid: state.user.uid,
             token: state.token,
             secret: state.secret,
         });
 
-        port.onMessage.addListener(function(msg) {
-            if (msg.result === "successGetMyKeys") {
-                state.key.keyBalance = msg.keyBalance;
-                state.key.holderNum = msg.holderNum;
-                state.key.priceInETH = msg.priceInETH;
-                state.key.totalPrice = msg.totalPrice;
+        if (msg.result === "successGetMyKeys") {
+            // @ts-ignore
+            state.key.keyBalance = msg.keyBalance;
+            // @ts-ignore
+            state.key.holderNum = msg.holderNum;
+            // @ts-ignore
+            state.key.priceInETH = msg.priceInETH;
+            // @ts-ignore
+            state.key.totalPrice = msg.totalPrice;
 
-                state.keys = msg.myKeys;
+            state.keys = msg.myKeys;
 
-                chrome.storage.local.set({
-                    state: state
-                });
+            // @ts-ignore
+            chrome.storage.local.set({ state });
 
-                updateKeysPage();
-            }
-        });
+            updateKeysPage();
+        }
 
         // @ts-ignore
         container.querySelector('#content-2').classList.add("selected");
@@ -1447,7 +2288,8 @@ function createDashboard(node: any) {
     container.addEventListener("input", e => {
        console.log("input");
     });
-    container.addEventListener("click", e => {
+
+    container.addEventListener("click", async (e) => {
         // @ts-ignore
         if (e.target.className == "xend-ext-view-comments") {
             e.preventDefault();
@@ -1466,7 +2308,7 @@ function createDashboard(node: any) {
             // @ts-ignore
             let uid = e.target.dataset.uid;
 
-            port.postMessage({
+            let message = await deleteArticle({
                 task: "deleteArticle",
                 postID: pid,
                 uid: uid,
@@ -1477,20 +2319,17 @@ function createDashboard(node: any) {
                 num: state.user.pageSize
             });
 
-            port.onMessage.addListener(function(msg) {
-                if (msg.result === "successDeleteArticle") {
-                    console.log("successDeleteArticle: ", msg.articles);
-                    state.user.articles = msg.articles;
-                    state.user.articleCount = msg.count;
-                    state.user.currentRange = msg.start;
+            if (message.result === "successDeleteArticle") {
+                console.log("successDeleteArticle: ", message.articles);
+                state.user.articles = message.articles;
+                state.user.articleCount = message.count;
+                state.user.currentRange = message.start;
 
-                    updateProfilePage();
+                updateProfilePage();
 
-                    chrome.storage.local.set({
-                        state: state
-                    });
-                }
-            });
+                // @ts-ignore
+                chrome.storage.local.set({ state });
+            }
         }
     });
 
@@ -1559,49 +2398,45 @@ function createDashboard(node: any) {
     
             signer = provider.getSigner();
             subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
-            xendContract = new ethers.Contract(address, abi, provider);
     
             const isEnabled = await subscribeContract.connect(signer)["isMonthlySubscriptionEnabled"](state.user.address);
-            console.log("updateSettingsPage", isEnabled);
+
             state.user.isSubscriptionEnabled = isEnabled;
     
-            port.postMessage({
+            let msg = await getCompatibility({
                 task: "getCompatibility",
                 uid: state.user.uid,
                 token: state.token,
                 secret: state.secret
             });
 
-            port.onMessage.addListener(function(msg) {
-                if (msg.result === "successGetCompatibility") {
-                    console.log("successGetCompatibility: ", msg.isCompatibility);
-                    // @ts-ignore
-                    document.getElementById("xendExtFriendTechCheckbox").checked = msg.isCompatibility;
+            if (msg.result === "successGetCompatibility") {
+                console.log("successGetCompatibility: ", msg.isCompatibility);
+                // @ts-ignore
+                document.getElementById("xendExtFriendTechCheckbox").checked = msg.isCompatibility;
 
-                    state.user.isCompatibility = msg.isCompatibility;
+                state.user.isCompatibility = msg.isCompatibility;
 
-                    chrome.storage.local.set({
-                        state: state
-                    });
-        
+                // @ts-ignore
+                chrome.storage.local.set({ state: state });
+    
+                // @ts-ignore
+                document.getElementById("xendExtSettingsPrice").text = `${state.user.subscribePriceInETH} ETH`;
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionPrice").value = state.user.subscribePriceInETH;
+                // @ts-ignore
+                document.getElementById("xendExtSubscriptionCheckbox").checked = isEnabled;
+    
+                if (isEnabled) {
                     // @ts-ignore
-                    document.getElementById("xendExtSettingsPrice").text = `${state.user.subscribePriceInETH} ETH`;
-                    // @ts-ignore
-                    document.getElementById("xendExtSubscriptionPrice").value = state.user.subscribePriceInETH;
-                    // @ts-ignore
-                    document.getElementById("xendExtSubscriptionCheckbox").checked = isEnabled;
-        
-                    if (isEnabled) {
-                        // @ts-ignore
-                        document.getElementById("xendExtSubscriptionCheckbox").disabled = true;
-                    }
-        
-                    // @ts-ignore
-                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
-                    // @ts-ignore
-                    document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+                    document.getElementById("xendExtSubscriptionCheckbox").disabled = true;
                 }
-            });
+    
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
+                // @ts-ignore
+                document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "";
+            }
         } catch (error: any) {
             console.log("updateSettingsPage", error);
         }
@@ -1621,8 +2456,7 @@ function createDashboard(node: any) {
         
         const item = getArticles(container, state.user.articles);
         // @ts-ignore
-        document.getElementById("xend-ext-dashboard-profile-articles").innerHTML = item
-            + `<div id="xend-ext-articles-loader">&nbsp;</div>`;
+        document.getElementById("xend-ext-dashboard-profile-articles").innerHTML = item + `<div id="xend-ext-articles-loader">&nbsp;</div>`;
 
         // @ts-ignore
         container.querySelectorAll(".xend-ext-comment input").forEach(el => {
@@ -1638,14 +2472,14 @@ function createDashboard(node: any) {
 
         // @ts-ignore
         container.querySelectorAll(".xend-ext-comment a").forEach(el => {
-            el.addEventListener("click", e => {
+            el.addEventListener("click", async (e) => {
                 e.preventDefault();
                 // @ts-ignore
                 const content = e.target.previousElementSibling.value.trim();
                 // @ts-ignore
                 const pid = e.target.dataset.pid;
                 // @ts-ignore
-                port.postMessage({
+                let msg = await postComment({
                     task: "postComment",
                     content: content,
                     postID: pid,
@@ -1656,29 +2490,27 @@ function createDashboard(node: any) {
                     start: state.user.currentRange,
                     num: state.user.pageSize
                 });
-                port.onMessage.addListener(function(msg) {
-                    if (msg.result === "successPostComment") {
-                        console.log("successPostComment: ", msg.articles);
-                        state.user.articles = msg.articles;
 
-                        updateProfilePage();
-            
-                        chrome.storage.local.set({
-                            state: state
-                        });
-                    }
-                });
+                if (msg.result === "successPostComment") {
+                    console.log("successPostComment: ", msg.articles);
+                    state.user.articles = msg.articles;
+
+                    updateProfilePage();
+        
+                    // @ts-ignore
+                    chrome.storage.local.set({ state });
+                }
             });
         });
     }
 
     // @ts-ignore
-    container.querySelector('a[href="#content-3"]').addEventListener("click", (e) => {
+    container.querySelector('a[href="#content-3"]').addEventListener("click", async (e) => {
         console.log("Show Profile Page");
         e.preventDefault();
 
         // @ts-ignore
-        port.postMessage({
+        let msg = await openProfilePage({
             task: "openProfilePage",
             uid: state.user.uid,
             token: state.token,
@@ -1686,33 +2518,32 @@ function createDashboard(node: any) {
             range: state.user.pageSize
         });
 
-        port.onMessage.addListener(function(msg) {
-            if (msg.result === "setArticleCount") {
-                console.log("setArticleCount", state);
-                // @ts-ignore
-                state.user.articleCount = msg.count;
-                state.user.currentRange = 0;
-                state.user.articles = msg.articles;
+        if (msg.result === "setArticleCount") {
+            console.log("setArticleCount", state);
+            // @ts-ignore
+            state.user.articleCount = msg.count;
+            state.user.currentRange = 0;
+            state.user.articles = msg.articles;
 
-                console.log("setArticleCount", msg.count);
+            console.log("setArticleCount", msg.count);
 
-                updateProfilePage();
-                chrome.storage.local.set({ state });
+            updateProfilePage();
 
-                // @ts-ignore
-                container.querySelector('#content-3').classList.add("selected");
-                // @ts-ignore
-                container.querySelector('#content-1').classList.remove("selected");
-                // @ts-ignore
-                container.querySelector('#content-2').classList.remove("selected");
-                // @ts-ignore
-                container.querySelector('#content-4').classList.remove("selected");
-            }
-        });
+            // @ts-ignore
+            chrome.storage.local.set({ state });
+
+            // @ts-ignore
+            container.querySelector('#content-3').classList.add("selected");
+            // @ts-ignore
+            container.querySelector('#content-1').classList.remove("selected");
+            // @ts-ignore
+            container.querySelector('#content-2').classList.remove("selected");
+            // @ts-ignore
+            container.querySelector('#content-4').classList.remove("selected");
+        }
     });
     // @ts-ignore
     container.querySelector('a[href="#content-4"]').addEventListener("click", (e) => {
-        console.log("Show FT Page");
         e.preventDefault();
         // @ts-ignore
         container.querySelector('#content-4').classList.add("selected");
@@ -1725,8 +2556,8 @@ function createDashboard(node: any) {
     });
 
     // @ts-ignore
-    container.querySelector("#xend-ext-dashboard-settings-btn").addEventListener("click", async (e) => {
-        await updateSettingsPage();
+    container.querySelector("#xend-ext-dashboard-settings-btn").addEventListener("click", (e) => {
+        updateSettingsPage();
     });
 
     // @ts-ignore
@@ -1753,34 +2584,10 @@ function createDashboard(node: any) {
     });
 
     // @ts-ignore
-    container.querySelectorAll(".xend-ext-comment a").forEach(el => {
-        el.addEventListener("click", e => {
-            e.preventDefault();
-            // @ts-ignore
-            const content = e.target.previousElementSibling.value.trim();
-            // @ts-ignore
-            const pid = e.target.dataset.pid;
-            // @ts-ignore
-            port.postMessage({
-                task: "postComment",
-                content: content,
-                postID: pid,
-                token: state.token,
-                secret: state.secret,
-                articlePosterUID: state.user.uid,
-                uid: state.user.uid
-            });
-
-        });
-    });
-
-    // @ts-ignore
     container.querySelector("#addFile").addEventListener("change", e => {
         // @ts-ignore
         let file = e.target.files[0];
-
         state.file = file;
-        console.log(state.file);
 
         const reader = new FileReader();
         reader.onload = async (event) => {
@@ -1791,11 +2598,11 @@ function createDashboard(node: any) {
         }
         reader.readAsDataURL(file);
     });
+
     // @ts-ignore
     container.querySelector("#removeFile").addEventListener("click", e => {
         // @ts-ignore
         state.file = "";
-
         // @ts-ignore
         document.getElementById("addFile").value = null;
         // @ts-ignore
@@ -1805,10 +2612,11 @@ function createDashboard(node: any) {
     });
 
     // @ts-ignore
-    container.querySelector("#xend-ext-dashboard-profile-post").addEventListener("click", e => {
+    container.querySelector("#xend-ext-dashboard-profile-post").addEventListener("click", async (e) => {
         console.log("Post Article");
         // @ts-ignore
         const content = document.querySelector("#xendExtPostContent").value.trim();
+        let msg = null;
         // @ts-ignore
         if (document.getElementById("addFile").value) {
             // @ts-ignore
@@ -1816,7 +2624,7 @@ function createDashboard(node: any) {
             const reader = new FileReader();
             reader.onload = async (event) => {
                 // @ts-ignore
-                port.postMessage({
+                msg = await postArticle({
                     task: "postArticle",
                     // @ts-ignore
                     image: event.target.result,
@@ -1828,11 +2636,25 @@ function createDashboard(node: any) {
                     type: state.file.type,
                     range: state.user.pageSize
                 });
+
+                if (msg.result === "successPostArticle") {
+                    console.log("successPostArticle: ", msg.count, msg.articles);
+                    state.user.articleCount = msg.count;
+                    state.user.articles = msg.articles;
+                    state.user.currentRange = msg.start;
+        
+                    updateProfilePage();
+        
+                    // @ts-ignore
+                    chrome.storage.local.set({
+                        state: state
+                    });
+                }
             }
             reader.readAsDataURL(file);
         } else {
             // @ts-ignore
-            port.postMessage({
+            msg = await postArticle({
                 task: "postArticle",
                 image: "",
                 content: content,
@@ -1842,26 +2664,25 @@ function createDashboard(node: any) {
                 type: "",
                 range: state.user.pageSize
             });
-        }
 
-        port.onMessage.addListener(function(msg) {
             if (msg.result === "successPostArticle") {
                 console.log("successPostArticle: ", msg.count, msg.articles);
                 state.user.articleCount = msg.count;
                 state.user.articles = msg.articles;
                 state.user.currentRange = msg.start;
-
+    
                 updateProfilePage();
     
+                // @ts-ignore
                 chrome.storage.local.set({
                     state: state
                 });
             }
-        });
+        }
     });
 
     // @ts-ignore
-    container.querySelector("#xend-ext-dashboard-profile-articles").addEventListener("scroll", e => {
+    container.querySelector("#xend-ext-dashboard-profile-articles").addEventListener("scroll", async (e) => {
         if (!state.loadingArticles && document.querySelector("#xend-ext-articles-loader")
             // @ts-ignore
             && (document.querySelector("#xend-ext-articles-loader").offsetTop <
@@ -1880,7 +2701,7 @@ function createDashboard(node: any) {
             const numOfArticles = document.querySelectorAll("#xend-ext-dashboard-profile-articles .xend-ext-dashboard-row").length;
 
             // @ts-ignore
-            port.postMessage({
+            let message = await getNextArticlesPage({
                 task: "getNextArticlesPage",
                 uid: state.user.uid,
                 token: state.token,
@@ -1889,48 +2710,35 @@ function createDashboard(node: any) {
                 range: state.user.pageSize
             });
 
-            port.onMessage.addListener(function(msg) {
-                if (msg.result === "setNextArticlesPage") {
-                    console.log("setNextArticlesPage", msg);
-                    if (msg.articles.length == 0) {
-                        state.loadingArticles = false;
-                        return;
-                    }
-                    if (state.user.articleCount == state.user.articles.length) {
-                        state.loadingArticles = false;
-                        return;
-                    }
-                    // @ts-ignore
-                    msg.articles.forEach(article => {
-                        // @ts-ignore
-                        state.user.articles.push(article);
-                    });
-            
-                    updateProfilePage();
-                    // const item = getArticles(container, msg.articles);
-                    // // @ts-ignore
-                    // document.querySelector("#xend-ext-articles-loader").insertAdjacentHTML("beforebegin", item);
-                    // @ts-ignore
-                    document.querySelector("#xend-ext-dashboard-profile-articles").scrollTop = scrollTop;
+            if (message.result === "setNextArticlesPage") {
+                console.log("setNextArticlesPage", message);
+                if (message.articles.length == 0) {
                     state.loadingArticles = false;
-                    chrome.storage.local.set({ state });
+                    return;
                 }
-            });
+                if (state.user.articleCount == state.user.articles.length) {
+                    state.loadingArticles = false;
+                    return;
+                }
+                // @ts-ignore
+                message.articles.forEach(article => {
+                    // @ts-ignore
+                    state.user.articles.push(article);
+                });
+        
+                updateProfilePage();
+                // @ts-ignore
+                document.querySelector("#xend-ext-dashboard-profile-articles").scrollTop = scrollTop;
+                state.loadingArticles = false;
 
+                // @ts-ignore
+                chrome.storage.local.set({ state });
+            }
         }
     });
 }
 
-const showBuySellModal = (header: any, body: any) => {
-    // @ts-ignore
-    document.querySelector("#buySellModalHeaderTxt").innerHTML = header;
-    // @ts-ignore
-    document.querySelector("#buySellModalMainTxt").innerHTML = body;
-    // @ts-ignore
-    document.querySelector("#buySellModal").style.display = "";   
-}
-
-const createProfileMenu = (node: any) => {
+function createProfileMenu(node: any) {
     console.log("createProfileMenu");
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
     const para = document.querySelector("body");
@@ -2054,7 +2862,7 @@ const createProfileMenu = (node: any) => {
     });
 
     // @ts-ignore
-    container.querySelector("#xend-ext-menu-xend").addEventListener("click", (e) => {
+    container.querySelector("#xend-ext-menu-xend").addEventListener("click", async (e) => {
         // @ts-ignore
         container.querySelector("#xend-ext-menu-up-trend-wrapper").style.display = "";
         
@@ -2062,7 +2870,7 @@ const createProfileMenu = (node: any) => {
         const prefix = "https://twitter.com/";
         path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
         
-        port.postMessage({
+        let message = await getKeyInfo({
             task: "getKeyInfo",
             keyOwnerName: path,
             token: state.token,
@@ -2070,284 +2878,34 @@ const createProfileMenu = (node: any) => {
             uid: state.user.uid
         });
 
-        port.onMessage.addListener(async function(msg: any) {
-            if (msg.result === "successGetKeyInfo") {
-                console.log("successGetKeyInfo", msg.data);
-                if (msg.data.result == "error") {
-                    // @ts-ignore
-                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
-                } else {
-                    state.profile.holderNum = msg.data.data.holderNum;
-                    state.profile.keyBalance = msg.data.data.keyBalance;
-                    state.profile.priceInETH = msg.data.data.priceInETH;
-                    state.profile.changeRate = msg.data.data.changeRate;
-                    state.profile.myKeyBalance = msg.data.data.myKeyBalance;
-                    state.profile.keyId = msg.data.data.keyId;
-                    state.profile.keyOwnerName = msg.data.data.keyOwnerName;
-                    state.profile.keyAvatar = msg.data.data.keyAvatar;
-                    state.profile.keyAddress = msg.data.data.keyAddress;
-                    state.profile.isSubscribed = msg.data.data.isSubscribed;
-                    
-                    isPendingBuy = false;
-                    isPendingSell = false;
+        if (message.result === "successGetKeyInfo") {
+            console.log("successGetKeyInfo", message.data);
+            if (message.data.result == "error") {
+                // @ts-ignore
+                document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+            } else {
+                state.profile.holderNum = message.data.data.holderNum;
+                state.profile.keyBalance = message.data.data.keyBalance;
+                state.profile.priceInETH = message.data.data.priceInETH;
+                state.profile.changeRate = message.data.data.changeRate;
+                state.profile.myKeyBalance = message.data.data.myKeyBalance;
+                state.profile.keyId = message.data.data.keyId;
+                state.profile.keyOwnerName = message.data.data.keyOwnerName;
+                state.profile.keyAvatar = message.data.data.keyAvatar;
+                state.profile.keyAddress = message.data.data.keyAddress;
+                state.profile.isSubscribed = message.data.data.isSubscribed;
+                
+                isPendingBuy = false;
+                isPendingSell = false;
 
-                    chrome.storage.local.set({
-                        state: state
-                    });
+                // @ts-ignore
+                chrome.storage.local.set({ state });
 
-                    updateBuySellPageXend();
-                }
+                updateBuySellPageXend();
             }
-        });
-    });
-};
-
-async function updateBuySellPageFriendTech() {
-    let path = window.location.href;
-    const prefix = "https://twitter.com/";
-    path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
-
-    port.postMessage({
-        task: "getFriendTechInfo",
-        name: path
-    });
-
-    // @ts-ignore
-    port.onMessage.addListener(async function(msg: any) {
-        if (msg.result === "successGetFriendTechInfo") {
-            console.log("successGetFriendTechInfo", msg);
-            if (msg.id == null) {
-                return;
-            }
-
-            state.profile.holderNum = msg.holderCount;
-            state.profile.keyBalance = msg.shareSupply;
-            state.profile.priceInETH = Web3.utils.fromWei(msg.displayPrice, "ether");
-            state.profile.keyAddress = msg.address;
-            state.profile.keyAvatar = msg.twitterPfpUrl;
-            state.profile.keyOwnerName = msg.twitterUsername;
-            state.profile.keyId = msg.twitterUserId;
-            state.profile.myKeyBalance = msg.balance;
-            
-            const prov = new ethers.providers.Web3Provider(getProvider());
-
-            signer = prov.getSigner();
-            console.log(signer);
-            // const friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);            
-            
-            // try {
-            //     let amount = await friendTechContract.connect(signer)["sharesBalance"](msg.address, state.user.address);
-            //     state.profile.myKeyBalance = amount;
-            // } catch (error) {
-            //     console.log(error);
-            //     state.profile.myKeyBalance = "0";
-            // }
-
-            const WETHPrice = await getTokenPrice(addrTokenWETH);
-            console.log("updateBuySellPageFriendTech", WETHPrice);
-        
-            let usdprice = "";
-            usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
-            console.log(document.getElementById("xend-ext-menu-usdprice"));
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-ethprice").innerHTML = (state.profile.priceInETH * 1).toFixed(5);
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-usdprice").innerHTML = usdprice;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-avatar").src = state.profile.keyAvatar;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-user").innerHTML = state.profile.keyOwnerName;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-holdernum").innerHTML = state.profile.holderNum;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-sharessupply").innerHTML = state.profile.keyBalance;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-input").addEventListener("change", (e: any) => {
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-price").innerHTML = (e.target.value * Number(state.profile.priceInETH)).toFixed(5);
-            });
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-sharesbalance").innerHTML = state.profile.myKeyBalance;
-
-            isPendingBuy = false;
-            isPendingSell = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").addEventListener("click", async (e: any) => {
-                if (isPendingBuy && isPendingSell) {
-                    return;
-                }
-                isPendingBuy = true;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").disabled = true;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
-                // @ts-ignore
-                let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
-        
-                if (amt <= 0) {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                    isPendingBuy = false;
-                    showBuySellModal("Alert", "Please input positive value.");
-                    return;
-                }
-        
-                const prov = new ethers.providers.Web3Provider(getProvider());
-        
-                signer = prov.getSigner();
-                let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
-
-                try {
-                    let price = await friendTechContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
-        
-                    const result = await friendTechContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
-                        value: parseInt(price._hex).toString()
-                    });
-        
-                    if (!result.hash) {
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                        isPendingBuy = false;
-                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        return;
-                    }
-                    // @ts-ignore
-                    result.wait().then(res => {
-                        console.log(res);
-                        // @ts-ignore
-                        if (res.status == 1) {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                            isPendingBuy = false;
-                            setTimeout(() => {
-                                checkURL(false);
-                            }, 1000);
-                        } else {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                            isPendingBuy = false;
-                            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        }
-                    });
-                } catch (error) {
-                    console.log("buyKey", error);
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                    isPendingBuy = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
-            });
-
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").addEventListener("click", async (e: any) => {
-                if (isPendingSell && isPendingBuy) {
-                    return;
-                }
-                isPendingSell = true;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").disabled = true;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
-                // @ts-ignore
-                let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
-        
-                if (amt <= 0) {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                    isPendingSell = false;
-                    showBuySellModal("Alert", "Please input positive value.");
-                    return;
-                }
-        
-                const prov = new ethers.providers.Web3Provider(getProvider());
-        
-                signer = prov.getSigner();
-                let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
-
-                try {
-                    let price = await friendTechContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
-        
-                    const result = await friendTechContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
-                        value: parseInt(price._hex).toString()
-                    });
-        
-                    if (!result.hash) {
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                        isPendingSell = false;
-                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        return;
-                    }
-                    // @ts-ignore
-                    result.wait().then(res => {
-                        console.log(res);
-                        // @ts-ignore
-                        if (res.status == 1) {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                            isPendingSell = false;
-                            
-                            setTimeout(() => {
-                                checkURL(false);
-                            }, 1000);
-                        } else {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                            isPendingSell = false;
-                            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        }
-                    });
-                } catch (error) {
-                    console.log("sellKey", error);
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                    isPendingSell = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
-            });
-
-            chrome.storage.local.set({
-                state: state
-            });
-
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-up-trend-wrapper").style.display = "none";
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn").disabled = true;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn-text").text = "Disabled";
         }
     });
-}
-
-const showSettingModal = (header: any, body: any) => {
-    // @ts-ignore
-    document.querySelector("#settingModalHeaderTxt").innerHTML = header;
-    // @ts-ignore
-    document.querySelector("#settingModalMainTxt").innerHTML = body;
-    // @ts-ignore
-    document.querySelector("#settingModal").style.display = "";   
-}
+};
 
 function createSettings(node: any) {
     const darkMode = window.matchMedia('(prefers-color-scheme: dark)');
@@ -2380,66 +2938,66 @@ function createSettings(node: any) {
     }
 
     const pageTpl = `
-    <div class="xend-ext-settings-header">
-        <div class="xend-ext-settings-top"><button id="xend-ext-settings-close"></button> Settings</div>
-        <div class="xend-ext-settings-subtitle">
-            <img id="xend-ext-settings-avatar" class="xend-ext-settings-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
-            <div id="xend-ext-settings-user" class="xend-ext-settings-user">${state.user.name}<div id="copyAddress" data-address=${state.user.address} title="Copy">${getShortHash(state.user.address)}</div></div>
-            <button id="xend-ext-logout">Logout</button>
+        <div class="xend-ext-settings-header">
+            <div class="xend-ext-settings-top"><button id="xend-ext-settings-close"></button> Settings</div>
+            <div class="xend-ext-settings-subtitle">
+                <img id="xend-ext-settings-avatar" class="xend-ext-settings-logo" src="${state.user.avatar}" alt="avatar" draggable="false" />
+                <div id="xend-ext-settings-user" class="xend-ext-settings-user">${state.user.name}<div id="copyAddress" data-address=${state.user.address} title="Copy">${getShortHash(state.user.address)}</div></div>
+                <button id="xend-ext-logout">Logout</button>
+            </div>
         </div>
-    </div>
-    <div id="xendExtSettingsList" class="xend-ext-settings-content">
-        <div id="xendExtSettingsSubscriptions" class="xend-ext-settings-row">
-          <div class="xend-ext-settings-column-left"> 
-            <div class="xend-ext-settings-title">Subscriptions</div>
-            Allow users to unlock your content for a monthly fee.
-          </div><div id="xendExtSettingsPrice" class="xend-ext-settings-column-right">${state.user.subscribePriceInETH} ETH</div>
-          <div style="clear: both"></div>
+        <div id="xendExtSettingsList" class="xend-ext-settings-content">
+            <div id="xendExtSettingsSubscriptions" class="xend-ext-settings-row">
+            <div class="xend-ext-settings-column-left"> 
+                <div class="xend-ext-settings-title">Subscriptions</div>
+                Allow users to unlock your content for a monthly fee.
+            </div><div id="xendExtSettingsPrice" class="xend-ext-settings-column-right">${state.user.subscribePriceInETH} ETH</div>
+            <div style="clear: both"></div>
+            </div>
+            <div id="xendExtSettingsFriend" class="xend-ext-settings-row">
+            <div class="xend-ext-settings-column-left"> 
+                <div class="xend-ext-settings-title">Friend.Tech compatibility</div>
+                Allow Friend.Tech keyholders to view your content. Minimum keys amount from content lock applies.
+            </div><input id="xendExtFriendTechCheckbox" type="checkbox" checked /><label for="xendExtFriendTechCheckbox"></label>
+            <div style="clear: both"></div>
+            </div>
         </div>
-        <div id="xendExtSettingsFriend" class="xend-ext-settings-row">
-          <div class="xend-ext-settings-column-left"> 
-            <div class="xend-ext-settings-title">Friend.Tech compatibility</div>
-            Allow Friend.Tech keyholders to view your content. Minimum keys amount from content lock applies.
-          </div><input id="xendExtFriendTechCheckbox" type="checkbox" checked /><label for="xendExtFriendTechCheckbox"></label>
-          <div style="clear: both"></div>
+        <div id="xendExtLogoutWrapper">
+            <button id="xend-ext-logout-bottom">Logout</button>
         </div>
-    </div>
-    <div id="xendExtLogoutWrapper">
-        <button id="xend-ext-logout-bottom">Logout</button>
-    </div>
-    <div id="xendExtSubscriptionDetail" style="display: none">
-        <div id="xendExtSubscriptionDetailBack">Back</div>
-        <div class="xend-ext-subscription-title">Subscriptions</div>
-        <div class="xend-ext-subscription-detail">Allow users to unlock your content for a monthly fee.<div>
-        </div>
-        <div class="xend-ext-subscription-row">
-            <div class="xend-ext-subscription-column-left">
-                <div class="xend-ext-settings-subscription-form">
-                    <input type="number" id="xendExtSubscriptionPrice" value=${state.user.subscribePriceInETH} />
+        <div id="xendExtSubscriptionDetail" style="display: none">
+            <div id="xendExtSubscriptionDetailBack">Back</div>
+            <div class="xend-ext-subscription-title">Subscriptions</div>
+            <div class="xend-ext-subscription-detail">Allow users to unlock your content for a monthly fee.<div>
+            </div>
+            <div class="xend-ext-subscription-row">
+                <div class="xend-ext-subscription-column-left">
+                    <div class="xend-ext-settings-subscription-form">
+                        <input type="number" id="xendExtSubscriptionPrice" value=${state.user.subscribePriceInETH} />
+                    </div>
+                </div>
+                <div class="xend-ext-subscription-column-right">
+                    <input id="xendExtSubscriptionCheckbox" type="checkbox" /><label for="xendExtSubscriptionCheckbox"></label>
                 </div>
             </div>
-            <div class="xend-ext-subscription-column-right">
-                <input id="xendExtSubscriptionCheckbox" type="checkbox" /><label for="xendExtSubscriptionCheckbox"></label>
+            <div class="xend-ext-subscription-apply">
+                <button id="xendExtSubscriptionUpdate" class="spinner-button">
+                    <span class="spinner-button-text">Apply</span>
+                </button>
             </div>
         </div>
-        <div class="xend-ext-subscription-apply">
-            <button id="xendExtSubscriptionUpdate" class="spinner-button">
-                <span class="spinner-button-text">Apply</span>
-            </button>
-        </div>
-    </div>
-    <div id="settingModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-icon"></div>
-                <p id="settingModalHeaderTxt" class="modal-header-text">Wrong setting</p>
+        <div id="settingModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-icon"></div>
+                    <p id="settingModalHeaderTxt" class="modal-header-text">Wrong setting</p>
+                </div>
+                <p id="settingModalMainTxt" class="modal-main-text">
+                    Connect your paired XEND setting, 0x1041...3234 to continue.
+                </p>
+                <button id="settingModalCloseBtn" class="modal-close-button">Close</button>
             </div>
-            <p id="settingModalMainTxt" class="modal-main-text">
-                Connect your paired XEND setting, 0x1041...3234 to continue.
-            </p>
-            <button id="settingModalCloseBtn" class="modal-close-button">Close</button>
         </div>
-    </div>
     `;
     container.innerHTML = pageTpl;
 
@@ -2476,7 +3034,7 @@ function createSettings(node: any) {
     // @ts-ignore
     container.querySelector("#xendExtFriendTechCheckbox").addEventListener("change", async (e: any) => {
         // @ts-ignore
-        port.postMessage({
+        let msg = await setFriendTechCompatibility({
             task: "setFriendTechCompatibility",
             isCompatible: e.target.checked,
             uid: state.user.uid,
@@ -2484,15 +3042,15 @@ function createSettings(node: any) {
             secret: state.secret
         });
         // @ts-ignore
-        port.onMessage.addListener(async function(msg: any) {
-            if (msg.result === "successSetCompatibility") {
-                if (msg.status) {
-                    state.user.isCompatibility = e.target.checked;
-                    chrome.storage.local.set({ state });
-                    alert("success");
-                }
+        if (msg.result === "successSetCompatibility") {
+            if (msg.status) {
+                state.user.isCompatibility = e.target.checked;
+
+                // @ts-ignore
+                chrome.storage.local.set({ state });
+                alert("success");
             }
-        });
+        }
     });
     // @ts-ignore
     container.querySelector("#xendExtSubscriptionUpdate").addEventListener("click", async (e) => {
@@ -2520,7 +3078,6 @@ function createSettings(node: any) {
 
         signer = provider.getSigner();
         subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
-        xendContract = new ethers.Contract(address, abi, provider);
         
         if (state.user.isSubscriptionEnabled) {
             try {
@@ -2641,295 +3198,7 @@ function createSettings(node: any) {
     }, false);
 }
 
-const updateBuySellPageXend = async () => {
-    const WETHPrice = await getTokenPrice(addrTokenWETH);
-    console.log("updateBuySellPageXend", WETHPrice);
-
-    let usdprice = "";
-    usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
-    console.log(document.getElementById("xend-ext-menu-usdprice"));
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-ethprice").innerHTML = (state.profile.priceInETH * 1).toFixed(5);
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-usdprice").innerHTML = usdprice;
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-avatar").src = state.profile.keyAvatar;
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-user").innerHTML = state.profile.keyOwnerName;
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-sharesbalance").innerHTML = state.profile.myKeyBalance;
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-holdernum").innerHTML = state.profile.holderNum;
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-sharessupply").innerHTML = state.profile.keyBalance;
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-up-trend").innerHTML = state.profile.changeRate;
-
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-key-input").addEventListener("change", (e: any) => {
-        // @ts-ignore
-        document.getElementById("xend-ext-menu-key-price").innerHTML = (e.target.value * Number(state.profile.priceInETH)).toFixed(5);
-    });
-
-    try {
-        const provider = new ethers.providers.Web3Provider(getProvider());
-
-        signer = provider.getSigner();
-        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
-        xendContract = new ethers.Contract(address, abi, provider);
-
-        const isEnabled = await subscribeContract.connect(signer)["isMonthlySubscriptionEnabled"](state.profile.keyAddress);
-        console.log("subscribe", isEnabled);
-        state.profile.isSubscriptionEnabled = isEnabled;
-
-        if (isEnabled && state.user.address != state.profile.keyAddress && !state.profile.isSubscribed) {
-            const result = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
-            state.profile.subscribePriceInETH = result;
-            console.log("subscribePrice", result);
-
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn-text").innerHTML = `1 Month • ${state.profile.subscribePriceInETH} ETH`;
-        } else {
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn-text").innerHTML = `Disabled`;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn").disabled = true;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium").style.opacity = "50% !important";                        
-        }
-
-        chrome.storage.local.set({ state });
-    } catch (error: any) {
-        console.log("updateBuySellPageXend", error);
-    }
-
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-premium-btn").addEventListener("click", async (e: any) => {
-        if (isPendingSubscribe) {
-            return;
-        }
-        isPendingSubscribe = true;
-        // @ts-ignore
-        document.getElementById("xend-ext-menu-premium-btn").disabled = true;
-        // @ts-ignore
-        document.getElementById("xend-ext-menu-premium-btn").classList.add("spinner-button-loading");
-
-        const provider = new ethers.providers.Web3Provider(getProvider());
-
-        signer = provider.getSigner();
-        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
-        xendContract = new ethers.Contract(address, abi, provider);
-
-        try {
-            const price = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
-            const result = await subscribeContract.connect(signer)["subscribe"](state.profile.keyAddress, {
-                value: parseInt(price._hex).toString()
-            });
-
-            if (!result.hash) {
-                isPendingSubscribe = false;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-premium-btn").disabled = false;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
-                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                return;
-            }
-            // @ts-ignore
-            result.wait().then(res => {
-                if (res.status) {
-                    isPendingSubscribe = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-premium-btn").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-premium-btn-text").text = "Subscribed";
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
-                } else {
-                    isPendingSubscribe = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-premium-btn").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
-            });
-        } catch (error) {
-            console.log("subscribeError", error);
-            isPendingSubscribe = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn").disabled = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
-            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-        }
-    });
-
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-key-buy").addEventListener("click", async (e: any) => {
-        if (isPendingBuy && isPendingSell) {
-            return;
-        }
-        isPendingBuy = true;
-        // @ts-ignore
-        document.getElementById("xend-ext-menu-key-buy").disabled = true;
-        // @ts-ignore
-        document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
-        // @ts-ignore
-        let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
-
-        if (amt <= 0) {
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").disabled = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-            isPendingBuy = false;
-            showBuySellModal("Alert", "Please input positive value.");
-            return;
-        }
-
-        const prov = new ethers.providers.Web3Provider(getProvider());
-
-        signer = prov.getSigner();
-        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
-        xendContract = new ethers.Contract(address, abi, prov);
-
-        try {
-            let price = await xendContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
-
-            const result = await xendContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
-                value: parseInt(price._hex).toString()
-            });
-
-            if (!result.hash) {
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                isPendingBuy = false;
-                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                return;
-            }
-            // @ts-ignore
-            result.wait().then(res => {
-                console.log(res);
-                // @ts-ignore
-                if (res.status == 1) {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                    isPendingBuy = false;
-                    
-                    setTimeout(() => {
-                        checkURL(false);
-                    }, 1000);
-                } else {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                    isPendingBuy = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
-            });
-        } catch (error) {
-            console.log("buyKey", error);
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").disabled = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-            isPendingBuy = false;
-            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-        }
-    });
-
-    // @ts-ignore
-    document.getElementById("xend-ext-menu-key-sell").addEventListener("click", async (e: any) => {
-        if (isPendingSell && isPendingBuy) {
-            return;
-        }
-        isPendingSell = true;
-        // @ts-ignore
-        document.getElementById("xend-ext-menu-key-sell").disabled = true;
-        // @ts-ignore
-        document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
-        // @ts-ignore
-        let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
-
-        if (amt <= 0) {
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").disabled = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-            isPendingSell = false;
-            showBuySellModal("Alert", "Please input positive value.");
-            return;
-        }
-
-        const prov = new ethers.providers.Web3Provider(getProvider());
-
-        signer = prov.getSigner();
-        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
-        xendContract = new ethers.Contract(address, abi, prov);
-
-        try {
-            let price = await xendContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
-
-            const result = await xendContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
-                value: parseInt(price._hex).toString()
-            });
-
-            if (!result.hash) {
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                isPendingSell = false;
-                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                return;
-            }
-            // @ts-ignore
-            result.wait().then(res => {
-                console.log(res);
-                // @ts-ignore
-                if (res.status == 1) {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                    isPendingSell = false;
-                   
-                    setTimeout(() => {
-                        checkURL(false);
-                    }, 1000);
-                } else {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                    isPendingSell = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
-            });
-        } catch (error) {
-            console.log("sellKey", error);
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").disabled = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-            isPendingSell = false;
-            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-        }
-    });
-
-    chrome.storage.local.set({
-        state: state
-    });
-}
-
-const checkURL = async (isStart: boolean) => {
-    console.log("checkURL", isStart);
+async function checkURL(isStart: boolean) {
     if (isStart) {
         // @ts-ignore
         document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
@@ -2939,13 +3208,13 @@ const checkURL = async (isStart: boolean) => {
         document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "none";
     }
 
-    updateFeedPage();
+    await updateFeedPage();
     
     let path = window.location.href;
     const prefix = "https://twitter.com/";
     path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
     
-    port.postMessage({
+    let msg = await getKeyInfo({
         task: "getKeyInfo",
         keyOwnerName: path,
         token: state.token,
@@ -2953,42 +3222,39 @@ const checkURL = async (isStart: boolean) => {
         uid: state.user.uid
     });
 
-    port.onMessage.addListener(async function(msg: any) {
-        if (msg.result === "successGetKeyInfo") {
-            console.log("successGetKeyInfo", msg.data);
-            if (msg.data.result == "error") {
+    if (msg.result === "successGetKeyInfo") {
+        if (msg.data.result == "error") {
+            // @ts-ignore
+            document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+        } else {
+            state.profile.holderNum = msg.data.data.holderNum;
+            state.profile.keyBalance = msg.data.data.keyBalance;
+            state.profile.priceInETH = msg.data.data.priceInETH;
+            state.profile.changeRate = msg.data.data.changeRate;
+            state.profile.myKeyBalance = msg.data.data.myKeyBalance;
+            state.profile.keyId = msg.data.data.keyId;
+            state.profile.keyOwnerName = msg.data.data.keyOwnerName;
+            state.profile.keyAvatar = msg.data.data.keyAvatar;
+            state.profile.keyAddress = msg.data.data.keyAddress;
+            state.profile.isSubscribed = msg.data.data.isSubscribed;
+            
+            // @ts-ignore
+            chrome.storage.local.set({ state });
+
+            await updateBuySellPageXend();
+
+            if (state.walletConnected && state.authorized && state.signedUp) {
+                // @ts-ignore
+                document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
                 // @ts-ignore
                 document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
-            } else {
-                state.profile.holderNum = msg.data.data.holderNum;
-                state.profile.keyBalance = msg.data.data.keyBalance;
-                state.profile.priceInETH = msg.data.data.priceInETH;
-                state.profile.changeRate = msg.data.data.changeRate;
-                state.profile.myKeyBalance = msg.data.data.myKeyBalance;
-                state.profile.keyId = msg.data.data.keyId;
-                state.profile.keyOwnerName = msg.data.data.keyOwnerName;
-                state.profile.keyAvatar = msg.data.data.keyAvatar;
-                state.profile.keyAddress = msg.data.data.keyAddress;
-                state.profile.isSubscribed = msg.data.data.isSubscribed;
-                
-                chrome.storage.local.set({
-                    state: state
-                });
-
-                await updateBuySellPageXend();
-
-                if (state.walletConnected && state.authorized && state.signedUp) {
-                    // @ts-ignore
-                    document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
-                    // @ts-ignore
-                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
-                }
             }
         }
-    });
+    }
 }
 
-const onMutation = async (mutations: MutationRecord[]) => {
+//////////////////////////////////////////////////////////////////  Main Loop
+async function onMutation(mutations: MutationRecord[]) {
     for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
             const nodes = traverseAndFindAttribute(node, 'aside');
@@ -2997,7 +3263,7 @@ const onMutation = async (mutations: MutationRecord[]) => {
                 const sidebar = n.parentElement.parentElement.parentElement;
 
                 getState(async () => {
-                    console.log("=== Get State ===");
+                    // When Page is refreshed, Load State, and Init UI
                     if (!document.getElementById("xendExtStyleList")) {
                         injectStyleList();
                     }
@@ -3046,31 +3312,37 @@ const onMutation = async (mutations: MutationRecord[]) => {
 };
 
 const mo = new MutationObserver(onMutation);
-const observe = () => {
+
+function observe() {
     mo.observe(document, {
         subtree: true,
         childList: true,
     });
 };
+
 observe();
 
 const mo2 = new MutationObserver(async (mutations) => {
+    // Change Color Mode according to System Settings
     for (const mutation of mutations) {
         if (mutation.attributeName === "style") {
             setThemeColors();
         }
     }
 });
-const observe2 = () => {
+
+function observe2() {
     mo2.observe(document.body, {
         attributes: true,
         subtree: false,
         childList: false,
     });
 };
-observe2();
 
+observe2();
+//////////////////////////////////////////////////////////////////  
 walletProvider = getProvider();
+
 // @ts-ignore
 walletProvider.on('accountsChanged', async function (accounts) {
     // Time to reload your interface with accounts[0]!
@@ -3078,13 +3350,14 @@ walletProvider.on('accountsChanged', async function (accounts) {
         logout();
     }
 })
+
 // @ts-ignore
 walletProvider.on('connect', async function (connectInfo) {
     // Time to reload your interface with the new networkId
     let chainId = parseInt(connectInfo.chainId, 16);
     console.log(chainId);
     if (chainId != chain) {
-        let res = await switchChain(walletProvider);
+        let res = await switchChainToETH(walletProvider);
         if (!res) {
             logout();
         }
