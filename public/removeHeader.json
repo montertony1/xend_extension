@@ -1,0 +1,15 @@
+[
+    {
+        "id": 1,
+        "priority": 1,
+        "action": {
+            "type": "modifyHeaders",
+            "responseHeaders": [
+                { "operation": "remove", "header": "X-Frame-Options" },
+                { "operation": "remove", "header": "Frame-Options" },
+                { "operation": "remove", "header": "content-security-policy" }
+            ]
+         },
+        "condition": { "urlFilter": "*" }
+    }
+]

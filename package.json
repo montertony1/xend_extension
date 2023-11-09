@@ -8,8 +8,9 @@
     "@types/jest": "^24.9.1",
     "@types/node": "^12.20.55",
     "@types/react": "^16.14.32",
+    "axios": "^1.6.0",
     "buffer": "^6.0.3",
-    "ethers": "^6.7.1",
+    "ethers": "^5.5.2",
     "metamask-extension-provider": "^3.0.0",
     "process": "^0.11.10",
     "react": "^18.2.0",
@@ -45,6 +46,7 @@
     ]
   },
   "devDependencies": {
+    "@types/detect-browser": "^4.0.0",
     "@types/react-dom": "^18.2.7",
     "@webcomponents/webcomponentsjs": "^2.8.0"
   }
