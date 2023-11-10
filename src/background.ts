@@ -215,7 +215,7 @@ chrome.runtime.onConnect.addListener(function(port) {
         } else if (msg.task === "getMyKeys") {
             let data;
             let friendTechKeyInfo = [];
-            let newKeyData = [];
+            let newKeyData: any = [];
             try {
                 console.log("getMyKeys", msg);
                 data = await (await fetch(`https://api.xend.tech/backend/user/get_my_keys?uid=${msg.uid}&token=${msg.token}&secret=${msg.secret}`)).json();
@@ -231,6 +231,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                         price: Web3.utils.fromWei(keyInfo.displayPrice, "ether"),
                         balance: keyInfo.balance
                     };
+                    data.totalPrice += Number(friendTechItem.price) * Number(friendTechItem.balance);
                     friendTechKeyInfo.push({
                         ...friendTechItem
                     });
@@ -268,6 +269,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                 }
                 newKeyData = newKeyData.reverse();
                 console.log("getMyKeys", data, friendTechKeys, friendTechKeyInfo, newKeyData);
+                data.myKeys = newKeyData;
             } catch (error) {
                 console.log("getMyKeys", error);
                 data = {
@@ -405,6 +407,17 @@ chrome.runtime.onConnect.addListener(function(port) {
                         balance: 0
                     });
                 }
+            } catch (error) {
+
+            }
+        } else if (msg.task === "getMyFriendTechInfo") {
+            try {
+                console.log("getMyFriendTechInfo", msg);
+                let res = await (await fetch(`https://prod-api.kosetto.com/twitter-users/${msg.name}`)).json();
+                port.postMessage({
+                    result: "successGetMyFriendTechInfo", 
+                    address: res.address
+                });
             } catch (error) {
 
             }

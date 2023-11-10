@@ -29,7 +29,10 @@ const styleList = chrome.runtime.getURL("/static/css/style.css");
 let isPendingSubscribe = false;
 let isPendingBuy = false;
 let isPendingSell = false;
+let isPendingKeysBuy  = false;
+let isPendingKeysSell  = false;
 let isPendingUpdatePrice = false;
+
 let currentSelectedKeyIdx: any = null;
 
 var port = chrome.runtime.connect({name: "authorize"});
@@ -59,6 +62,7 @@ let state = {
         feedCount: 0,
         currentFeedIDX: 0,
         feedPageSize: 4,
+        friendtechAddress: ""
     },
     feed: [],
     keysPageInfo: {
@@ -108,6 +112,30 @@ const apiUrl = 'https://api.coingecko.com/api/v3';
 const config = {
     "CHROME_ID": "nkbihfbeogaeaoehlefnkodbefgpgknn",
     "FIREFOX_ID": "webextension@metamask.io"
+}
+
+function setIsPendingSubscribe(val: boolean) {
+    isPendingSubscribe = val;
+}
+
+function setIsPendingBuy(val: boolean) {
+    isPendingBuy = val;
+}
+
+function setIsPendingSell(val: boolean) {
+    isPendingSell = val;
+}
+
+function setIsPendingKeysBuy(val: boolean) {
+    isPendingKeysBuy = val;
+}
+
+function setIsPendingKeysSell(val: boolean) {
+    isPendingKeysSell = val;
+}
+
+function setIsPendingUpdatePrice(val: boolean) {
+    isPendingUpdatePrice = val;
 }
 
 async function getTokenPrice(tokenAddr: string) {
@@ -251,6 +279,15 @@ function showWalletModal(header: any, body: any) {
     document.querySelector("#walletModalMainTxt").innerHTML = body;
     // @ts-ignore
     document.querySelector("#walletModal").style.display = "";   
+}
+
+function showDashboardModal(header: any, body: any) {
+    // @ts-ignore
+    document.querySelector("#dashboardModalHeaderTxt").innerHTML = header;
+    // @ts-ignore
+    document.querySelector("#dashboardModalMainTxt").innerHTML = body;
+    // @ts-ignore
+    document.querySelector("#dashboardModal").style.display = "";   
 }
 
 function showBuySellModal(header: any, body: any) {
@@ -418,30 +455,48 @@ function getKeyArray(data: any) {
     let content = "";
 
     for (let i = 0; i < data.keys.length; i++) {
-        content += `<div class="xend-ext-dashboard-keys-row" data-name=${data.keys[i].name} >
+        let priceXend = 0;
+        let priceFriendTech = 0;
+        let balanceXend = 0;
+        let balanceFriendTech = 0;
+        let name= "";
+        let avatar = "";
+        if (data.keys[i]["xend"]) {
+            priceXend = Number(data.keys[i]["xend"].price);
+            balanceXend = Number(data.keys[i]["xend"].balance);
+            name = data.keys[i]["xend"].name;
+            avatar = data.keys[i]["xend"].avatar;
+        }
+        if  (data.keys[i]["friendtech"]) {
+            priceFriendTech = Number(data.keys[i]["friendtech"].price);
+            balanceFriendTech = Number(data.keys[i]["friendtech"].balance);
+            name = data.keys[i]["friendtech"].name;
+            avatar = data.keys[i]["friendtech"].avatar;
+        }
+        content += `<div class="xend-ext-dashboard-keys-row" data-name=${name} >
                         <div class="xend-ext-dashboard-column-left">         
-                            <img class="xend-ext-dashboard-keys-logo" src="${data.keys[i].avatar}" alt="avatar" draggable="false" />
+                            <img class="xend-ext-dashboard-keys-logo" src="${avatar}" alt="avatar" draggable="false" />
                             <div class="xend-ext-dashboard-keys-user">
-                                <a href="/${data.keys[i].name}">@${data.keys[i].name}</a>
-                                <div>${getPrice(data.keys[i].price)}</div>
+                                <a href="/${name}">@${name}</a>
+                                <div>${getPrice(priceXend)}/${getPrice(priceFriendTech)}</div>
                             </div>
                         </div>
                         <div class="xend-ext-dashboard-column-right">
                             <div class="xend-ext-keys-value">
                                 <div class="xend-ext-keys-keyset">
-                                    <div class="xend-ext-keys-friendtech-key">${data.keys[i].balance}</div>
-                                    <div class="xend-ext-keys-xend-key">${data.keys[i].balance}</div>
+                                    <div class="xend-ext-keys-friendtech-key">${balanceFriendTech}</div>
+                                    <div class="xend-ext-keys-xend-key">${balanceXend}</div>
                                 </div>
                                 <div>
                                     <div class="xend-ext-dashboard-currency"></div>
-                                    <span>${getTotalPrice(data.keys[i].price, data.keys[i].balance)}</span>  
+                                    <span>${((priceXend * balanceXend) + (priceFriendTech * balanceFriendTech)).toFixed(5)}</span>  
                                 </div>
                             </div>
                             <div class="xend-ext-keys-direction xend-ext-keys-arrow-down"></div>
                         </div>
                         <div style="clear: both"></div>
                     </div>
-                    <div class="xend-ext-dashboard-keys-toolset">
+                    <div class="xend-ext-dashboard-keys-toolset" data-mode="xend">
                         <div class="xend-ext-dashboard-keys-trade xend-ext-dashboard-key-row">
                             <div class="xend-ext-dashboard-keys-switch">
                                 <button class="xend-ext-dashboard-keys-xend xend-ext-dashboard-switch-platform"></button>
@@ -465,7 +520,7 @@ function getKeyArray(data: any) {
     return content;
 }
 
-function getKeys(container: any, data: any) {
+function getKeys(data: any) {
     let content = 
         `<div class="xend-ext-dashboard-keys">
             <img id="xend-ext-dashboard-keys-avatar" class="xend-ext-dashboard-keys-logo" src="${data.avatar}" alt="avatar" draggable="false" />
@@ -552,16 +607,16 @@ async function getProvider() {
     } else {
         const provider = getInPageProvider();
         
-        try {
-            // @ts-ignore
-            const chainId = await provider.request({ method: "eth_chainId" });
-        } catch (error) {   
-            console.log("Check Metamask: ", error);
-            // alert("Please install Metamask");
-            // logout();
-            // window.open('https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn', '_blank');
-            return null;
-        }
+        // try {
+        //     // @ts-ignore
+        //     const chainId = await provider.request({ method: "eth_chainId" });
+        // } catch (error) {   
+        //     console.log("Check Metamask: ", error);
+        //     // alert("Please install Metamask");
+        //     // logout();
+        //     // window.open('https://chrome.google.com/webstore/detail/metamask/nkbihfbeogaeaoehlefnkodbefgpgknn', '_blank');
+        //     return null;
+        // }
         return provider;
     }
 }
@@ -578,9 +633,9 @@ async function getAccounts(provider: AnyNaptrRecord) {
         ]);
 
         if (chain != chainId) {
-            const result = await switchChain(provider);
+            const result = await switchChainEth(provider);
             if (!result) {
-                alert("Please switch to Goerli Testnet.");
+                alert("Please switch to Ethereum Mainnet.");
                 return [];
             }
         }
@@ -589,8 +644,30 @@ async function getAccounts(provider: AnyNaptrRecord) {
     return [];
 }
 
+async function getAccountsBase(provider: AnyNaptrRecord) {
+    if (provider) {
+        const [accounts, chainId] = await Promise.all([
+            // @ts-ignore
+            provider.request({
+                method: 'eth_requestAccounts',
+            }),
+            // @ts-ignore
+            provider.request({ method: 'eth_chainId' }),
+        ]);
+
+        if (friendTechChain != chainId) {
+            const result = await switchChainBase(provider);
+            if (!result) {
+                alert("Please switch to Base Chain.");
+                return [];
+            }
+        }
+        return [accounts, chain];
+    }
+    return [];
+}
 // @ts-ignore
-async function switchChain(provider) {
+async function switchChainEth(provider) {
     try {
         // @ts-ignore
         const res = await provider.request({
@@ -627,7 +704,49 @@ async function switchChain(provider) {
             console.error("request3: ", error);
         }
     }
-    let res: boolean = await switchChain(provider);
+    let res: boolean = await switchChainEth(provider);
+    return res;
+}
+
+// @ts-ignore
+async function switchChainBase(provider) {
+    try {
+        // @ts-ignore
+        const res = await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${friendTechChain.toString(16)}` }],
+        });
+
+        return true;
+    } catch (error) {
+        // @ts-ignore
+        if (error.code === 4902) {
+            try {
+                // @ts-ignore
+                const res = provider.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: `0x${friendTechChain.toString(16)}`,
+                        rpcUrls: ['https://base.llamarpc.com'],
+                        chainName: 'Base LlamaNodes',
+                        nativeCurrency: {
+                            name: 'Ethereum',
+                            symbol: 'ETH',
+                            decimals: 18,
+                        },
+                        blockExplorerUrls: ['https://basescan.org'],
+                    }],
+                });
+
+                return true;
+            } catch (error) {
+                console.error("request2: ", error);
+            }
+        } else {
+            console.error("request3: ", error);
+        }
+    }
+    let res: boolean = await switchChainBase(provider);
     return res;
 }
 
@@ -842,6 +961,14 @@ async function signUp() {
     
     const prov = await getProvider();
     const provider = new ethers.providers.Web3Provider(prov);
+
+    const [accounts, chainId] = await getAccounts(prov);
+
+    if (chainId != chain) {
+        showWalletModal("Alert", "Please switch to Ethereum Mainnet");
+        switchChainEth(prov);
+        return;
+    }
 
     signer = provider.getSigner();
     xendContract = new ethers.Contract(address, abi, provider);
@@ -1145,7 +1272,365 @@ async function updateFeedPage() {
     });
 }
 
+function showWarningMessage(msg: any) {
+    console.log("Show Warning Message");
+    // @ts-ignore
+    document.querySelector("#xend-ext-dashboard-warning").style.visibility = "visible";
+    // @ts-ignore
+    document.querySelector("#xend-ext-dashboard-warningmsg").text = msg;
+}
+
+function hideWarningMessage() {
+    console.log("Hide Warning message");
+    // @ts-ignore
+    document.querySelector("#xend-ext-dashboard-warning").style.visibility = "hidden";
+}
+
+async function buyFriendTechKey(btn: any, addr: any, amt: any, callback: any, openModal: any, setStatus: any) {
+    console.log("buyFriendTechKey", addr, amt);
+
+    const provider = await getProvider();
+    const prov = new ethers.providers.Web3Provider(provider);
+    
+    const [accounts, chainId] = await getAccountsBase(provider);
+    const account = getNormalizeAddress(accounts);
+
+    if (account.toLowerCase() != state.user.friendtechAddress.toLowerCase()) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong wallet connected on Metamask");
+        openModal("Wrong Wallet.", `Connect your paired Friend Tech wallet, ${getShortHash(state.user.friendtechAddress)} to continue.`);
+        return;
+    }
+
+    if (chainId != friendTechChain) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong chain selected on Metamask");
+        openModal("Alert.", "Please switch chain to Base chain.");
+        return;
+    }
+
+    hideWarningMessage();
+
+    let signer = prov.getSigner();
+    let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
+    
+    try {
+        let price = await friendTechContract.connect(signer)["getBuyPriceAfterFee"](addr, amt);
+    
+        const result = await friendTechContract.connect(signer)["buyShares"](addr, amt, {
+            value: parseInt(price._hex).toString()
+        });
+    
+        if (!result.hash) {
+            // @ts-ignore
+            btn.disabled = false;
+            // @ts-ignore
+            btn.classList.remove("spinner-button-loading");
+            setStatus(false);
+            openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            return;
+        }
+        // @ts-ignore
+        result.wait().then(res => {
+            console.log(res);
+            // @ts-ignore
+            if (res.status == 1) {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                setTimeout(() => {
+                    callback();
+                }, 1000);
+            } else {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            }
+        });
+    } catch (error) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+    }
+}
+
+async function sellFriendTechKey(btn: any, addr: any, amt: any, callback: any, openModal: any, setStatus: any) {
+    console.log("sellFriendTechKey", addr, amt);
+
+    const provider = await getProvider();
+    const prov = new ethers.providers.Web3Provider(provider);
+    
+    const [accounts, chainId] = await getAccountsBase(provider);
+    const account = getNormalizeAddress(accounts);
+
+    if (account.toLowerCase() != state.user.friendtechAddress.toLowerCase()) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong wallet connected on Metamask");
+        openModal("Wrong Wallet.", `Connect your paired Friend Tech wallet, ${getShortHash(state.user.friendtechAddress)} to continue.`);
+        return;
+    }
+
+    if (chainId != friendTechChain) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong chain selected on Metamask");
+        openModal("Alert.", "Please switch chain to Base chain.");
+        return;
+    }
+
+    hideWarningMessage();
+
+    let signer = prov.getSigner();
+    let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
+
+    try {
+        let price = await friendTechContract.connect(signer)["getSellPriceAfterFee"](addr, amt);
+
+        const result = await friendTechContract.connect(signer)["sellShares"](address, amt, {
+            value: parseInt(price._hex).toString()
+        });
+
+        if (!result.hash) {
+            // @ts-ignore
+            btn.disabled = false;
+            // @ts-ignore
+            btn.classList.remove("spinner-button-loading");
+            setStatus(false);
+            openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            return;
+        }
+        // @ts-ignore
+        result.wait().then(res => {
+            // @ts-ignore
+            if (res.status == 1) {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                
+                setTimeout(() => {
+                    callback();
+                }, 1000);
+            } else {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            }
+        });
+    } catch (error) {
+        console.log("sellKey", error);
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+    }
+}
+
+async function buyXendKey(btn: any, addr: any, amt: any, callback: any, openModal: any, setStatus: any) {
+    console.log("buyXendKey", addr, amt);
+
+    const provider = await getProvider();
+    const prov = new ethers.providers.Web3Provider(provider);
+    
+    const [accounts, chainId] = await getAccounts(provider);
+    const account = getNormalizeAddress(accounts);
+
+    if (account.toLowerCase() != state.user.address.toLowerCase()) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong wallet connected on Metamask");
+        openModal("Wrong Wallet.", `Connect your paired Xend wallet, ${getShortHash(state.user.address)} to continue.`);
+        return;
+    }
+
+    if (chainId != chain) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong chain selected on Metamask");
+        openModal("Alert.", "Please switch chain to Ethereum Mainnet.");
+        return;
+    }
+
+    hideWarningMessage();
+
+    let signer = prov.getSigner();
+    xendContract = new ethers.Contract(address, abi, prov);
+
+    try {
+        let price = await xendContract.connect(signer)["getBuyPriceAfterFee"](addr, amt);
+        price = parseInt(price._hex).toString();
+
+        console.log("buyXendKey", price);
+
+        const result = await xendContract.connect(signer)["buyShares"](addr, amt, {
+            value: price
+        });
+
+        if (!result.hash) {
+            // @ts-ignore
+            btn.disabled = false;
+            // @ts-ignore
+            btn.classList.remove("spinner-button-loading");
+            setStatus(false);
+            openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            return;
+        }
+        // @ts-ignore
+        result.wait().then(res => {
+            // @ts-ignore
+            if (res.status == 1) {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                
+                setTimeout(() => {
+                    callback();
+                }, 1000);
+            } else {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            }
+        });
+    } catch (error) {
+        console.log("buyKey", error);
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+    }
+}
+
+async function sellXendKey(btn: any, addr: any, amt: any, callback: any, openModal: any, setStatus: any) {
+    console.log("sellXendKey", addr, amt);
+
+    const provider = await getProvider();
+    const prov = new ethers.providers.Web3Provider(provider);
+
+    const [accounts, chainId] = await getAccounts(provider);
+    const account = getNormalizeAddress(accounts);
+
+    if (account.toLowerCase() != state.user.address.toLowerCase()) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong wallet connected on Metamask");
+        openModal("Wrong Wallet.", `Connect your paired Xend wallet, ${getShortHash(state.user.address)} to continue.`);
+        return;
+    }
+
+    if (chainId != chain) {
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        showWarningMessage("Wrong chain selected on Metamask");
+        openModal("Alert.", "Please switch chain to Ethereum Mainnet.");
+        return;
+    }
+
+    hideWarningMessage();
+
+    let signer = prov.getSigner();
+    xendContract = new ethers.Contract(address, abi, prov);
+
+    try {
+        let price = await xendContract.connect(signer)["getSellPriceAfterFee"](addr, amt);
+
+        const result = await xendContract.connect(signer)["sellShares"](addr, amt, {
+            value: parseInt(price._hex).toString()
+        });
+
+        if (!result.hash) {
+            // @ts-ignore
+            btn.disabled = false;
+            // @ts-ignore
+            btn.classList.remove("spinner-button-loading");
+            setStatus(false);
+            openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            return;
+        }
+        // @ts-ignore
+        result.wait().then(res => {
+            // @ts-ignore
+            if (res.status == 1) {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                
+                setTimeout(() => {
+                    callback();
+                }, 1000);
+            } else {
+                // @ts-ignore
+                btn.disabled = false;
+                // @ts-ignore
+                btn.classList.remove("spinner-button-loading");
+                setStatus(false);
+                openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+            }
+        });
+    } catch (error) {
+        console.log("sellKey", error);
+        // @ts-ignore
+        btn.disabled = false;
+        // @ts-ignore
+        btn.classList.remove("spinner-button-loading");
+        setStatus(false);
+        openModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
+    }
+}
+
 async function updateBuySellPageFriendTech() {
+    console.log("updateBuySellPageFriendTech");
+
     let path = window.location.href;
     const prefix = "https://twitter.com/";
     path = path.slice(path.indexOf(prefix) + prefix.length, path.length);
@@ -1159,6 +1644,7 @@ async function updateBuySellPageFriendTech() {
     port.onMessage.addListener(async function(msg: any) {
         if (msg.result === "successGetFriendTechInfo") {
             if (msg.id == null) {
+                showBuySellModal("Alert", "You don't have account in Friend.Tech Platform.");
                 return;
             }
 
@@ -1203,81 +1689,36 @@ async function updateBuySellPageFriendTech() {
 
             isPendingBuy = false;
             isPendingSell = false;
+            
             // @ts-ignore
             document.getElementById("xend-ext-menu-key-buy").addEventListener("click", async (e: any) => {
                 if (isPendingBuy && isPendingSell) {
                     return;
                 }
+
+                console.log("xend-ext-menu-key-buy");
+
                 isPendingBuy = true;
+
+                let btn = document.getElementById("xend-ext-menu-key-buy");
                 // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").disabled = true;
+                btn.disabled = true;
                 // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
+                btn.classList.add("spinner-button-loading");
                 // @ts-ignore
                 let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
         
                 if (amt <= 0) {
                     // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
+                    btn.disabled = false;
                     // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+                    btn.classList.remove("spinner-button-loading");
                     isPendingBuy = false;
                     showBuySellModal("Alert", "Please input positive value.");
                     return;
                 }
         
-                const provider = await getProvider();
-                const prov = new ethers.providers.Web3Provider(provider);
-        
-                signer = prov.getSigner();
-                let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
-
-                try {
-                    let price = await friendTechContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
-        
-                    const result = await friendTechContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
-                        value: parseInt(price._hex).toString()
-                    });
-        
-                    if (!result.hash) {
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                        isPendingBuy = false;
-                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        return;
-                    }
-                    // @ts-ignore
-                    result.wait().then(res => {
-                        console.log(res);
-                        // @ts-ignore
-                        if (res.status == 1) {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                            isPendingBuy = false;
-                            setTimeout(() => {
-                                checkURL(false);
-                            }, 1000);
-                        } else {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                            isPendingBuy = false;
-                            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        }
-                    });
-                } catch (error) {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                    isPendingBuy = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
+                buyFriendTechKey(btn, state.profile.keyAddress, amt, () => checkURL(false), showBuySellModal, setIsPendingBuy);
             });
 
             // @ts-ignore
@@ -1285,77 +1726,29 @@ async function updateBuySellPageFriendTech() {
                 if (isPendingSell && isPendingBuy) {
                     return;
                 }
+
+                console.log("xend-ext-menu-key-sell");
+
                 isPendingSell = true;
+                let btn = document.getElementById("xend-ext-menu-key-sell");
                 // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").disabled = true;
+                btn.disabled = true;
                 // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
+                btn.classList.add("spinner-button-loading");
                 // @ts-ignore
                 let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
         
                 if (amt <= 0) {
                     // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
+                    btn.disabled = false;
                     // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+                    btn.classList.remove("spinner-button-loading");
                     isPendingSell = false;
                     showBuySellModal("Alert", "Please input positive value.");
                     return;
                 }
         
-                const provider = await getProvider();
-                const prov = new ethers.providers.Web3Provider(provider);
-        
-                signer = prov.getSigner();
-                let friendTechContract = new ethers.Contract(friendTechAddress, friendTechABI, prov);
-
-                try {
-                    let price = await friendTechContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
-        
-                    const result = await friendTechContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
-                        value: parseInt(price._hex).toString()
-                    });
-        
-                    if (!result.hash) {
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                        // @ts-ignore
-                        document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                        isPendingSell = false;
-                        showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        return;
-                    }
-                    // @ts-ignore
-                    result.wait().then(res => {
-                        // @ts-ignore
-                        if (res.status == 1) {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                            isPendingSell = false;
-                            
-                            setTimeout(() => {
-                                checkURL(false);
-                            }, 1000);
-                        } else {
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                            // @ts-ignore
-                            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                            isPendingSell = false;
-                            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                        }
-                    });
-                } catch (error) {
-                    console.log("sellKey", error);
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                    isPendingSell = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
+                sellFriendTechKey(btn, state.profile.keyAddress, amt, () => checkURL(false), showBuySellModal, setIsPendingSell);
             });
 
             chrome.storage.local.set({ state });
@@ -1371,8 +1764,15 @@ async function updateBuySellPageFriendTech() {
 }
 
 async function updateBuySellPageXend() {
+    console.log("updateBuySellPageXend");
+    
+    let pr = await getProvider();
+
+    while (!switchChainEth(pr)) {
+
+    }
+
     const WETHPrice = await getTokenPrice(addrTokenWETH);
-    console.log("updateBuySellPageXend", WETHPrice);
 
     let usdprice = "";
     usdprice = `$${(Number(state.profile.priceInETH) * WETHPrice).toFixed(2)}`;
@@ -1443,11 +1843,39 @@ async function updateBuySellPageXend() {
         // @ts-ignore
         document.getElementById("xend-ext-menu-premium-btn").classList.add("spinner-button-loading");
 
-        const prov = await getProvider();
-        const provider = new ethers.providers.Web3Provider(prov);
+        const provider = await getProvider();
+        const prov = new ethers.providers.Web3Provider(provider);
+    
+        const [accounts, chainId] = await getAccounts(provider);
+        const account = getNormalizeAddress(accounts);
+    
+        if (account.toLowerCase() != state.user.address.toLowerCase()) {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+            setIsPendingSubscribe(false);
+            showWarningMessage("Wrong wallet connected on Metamask");
+            showBuySellModal("Wrong Wallet.", `Connect your paired Xend wallet, ${getShortHash(state.user.address)} to continue.`);
+            return;
+        }
+    
+        if (chainId != chain) {
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").disabled = false;
+            // @ts-ignore
+            document.getElementById("xend-ext-menu-premium-btn").classList.remove("spinner-button-loading");
+            setIsPendingSubscribe(false);
+            showWarningMessage("Wrong chain selected on Metamask");
+            showBuySellModal("Alert.", "Please switch chain to Ethereum Mainnet.");
+            return;
+        }
+    
+        hideWarningMessage();
+    
+        let signer = prov.getSigner();
 
-        signer = provider.getSigner();
-        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
 
         try {
             const price = await subscribeContract.connect(signer)["monthlySubPrice"](state.profile.keyAddress);
@@ -1500,76 +1928,25 @@ async function updateBuySellPageXend() {
             return;
         }
         isPendingBuy = true;
+        let btn = document.getElementById("xend-ext-menu-key-buy")
         // @ts-ignore
-        document.getElementById("xend-ext-menu-key-buy").disabled = true;
+        btn.disabled = true;
         // @ts-ignore
-        document.getElementById("xend-ext-menu-key-buy").classList.add("spinner-button-loading");
+        btn.classList.add("spinner-button-loading");
         // @ts-ignore
         let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
 
         if (amt <= 0) {
             // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").disabled = false;
+            btn.disabled = false;
             // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
+            btn.classList.remove("spinner-button-loading");
             isPendingBuy = false;
             showBuySellModal("Alert", "Please input positive value.");
             return;
         }
 
-        const provider = await getProvider();
-        const prov = new ethers.providers.Web3Provider(provider);
-
-        signer = prov.getSigner();
-        xendContract = new ethers.Contract(address, abi, prov);
-
-        try {
-            let price = await xendContract.connect(signer)["getBuyPriceAfterFee"](state.profile.keyAddress, amt);
-
-            const result = await xendContract.connect(signer)["buyShares"](state.profile.keyAddress, amt, {
-                value: parseInt(price._hex).toString()
-            });
-
-            if (!result.hash) {
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                isPendingBuy = false;
-                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                return;
-            }
-            // @ts-ignore
-            result.wait().then(res => {
-                // @ts-ignore
-                if (res.status == 1) {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                    isPendingBuy = false;
-                    
-                    setTimeout(() => {
-                        checkURL(false);
-                    }, 1000);
-                } else {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-                    isPendingBuy = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
-            });
-        } catch (error) {
-            console.log("buyKey", error);
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").disabled = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-buy").classList.remove("spinner-button-loading");
-            isPendingBuy = false;
-            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-        }
+        buyXendKey(btn, state.profile.keyAddress, amt, () => checkURL(false), showBuySellModal, setIsPendingBuy);
     });
 
     // @ts-ignore
@@ -1578,79 +1955,285 @@ async function updateBuySellPageXend() {
             return;
         }
         isPendingSell = true;
+        let btn = document.getElementById("xend-ext-menu-key-sell");
         // @ts-ignore
-        document.getElementById("xend-ext-menu-key-sell").disabled = true;
+        btn.disabled = true;
         // @ts-ignore
-        document.getElementById("xend-ext-menu-key-sell").classList.add("spinner-button-loading");
+        btn.classList.add("spinner-button-loading");
         // @ts-ignore
         let amt = (document.getElementById("xend-ext-menu-key-input").value) * 1;
 
         if (amt <= 0) {
             // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").disabled = false;
+            btn.disabled = false;
             // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
+            btn.classList.remove("spinner-button-loading");
             isPendingSell = false;
             showBuySellModal("Alert", "Please input positive value.");
             return;
         }
 
-        const provider = await getProvider();
-        const prov = new ethers.providers.Web3Provider(provider);
-
-        signer = prov.getSigner();
-        xendContract = new ethers.Contract(address, abi, prov);
-
-        try {
-            let price = await xendContract.connect(signer)["getSellPriceAfterFee"](state.profile.keyAddress, amt);
-
-            const result = await xendContract.connect(signer)["sellShares"](state.profile.keyAddress, amt, {
-                value: parseInt(price._hex).toString()
-            });
-
-            if (!result.hash) {
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                // @ts-ignore
-                document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                isPendingSell = false;
-                showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                return;
-            }
-            // @ts-ignore
-            result.wait().then(res => {
-                // @ts-ignore
-                if (res.status == 1) {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                    isPendingSell = false;
-                   
-                    setTimeout(() => {
-                        checkURL(false);
-                    }, 1000);
-                } else {
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").disabled = false;
-                    // @ts-ignore
-                    document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-                    isPendingSell = false;
-                    showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-                }
-            });
-        } catch (error) {
-            console.log("sellKey", error);
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").disabled = false;
-            // @ts-ignore
-            document.getElementById("xend-ext-menu-key-sell").classList.remove("spinner-button-loading");
-            isPendingSell = false;
-            showBuySellModal("Transaction Failed.", "Insufficient funds for this transaction, please try again.");
-        }
+        sellXendKey(btn, state.profile.keyAddress, amt, () => checkURL(false), showBuySellModal, setIsPendingSell);
     });
 
     chrome.storage.local.set({ state });
+}
+
+function refreshKeysPage() {
+    console.log("refreshKeysPage");
+    
+    port = chrome.runtime.connect({name: "authorize"});
+    port.postMessage({
+        task: "getMyKeys",
+        uid: state.user.uid,
+        token: state.token,
+        secret: state.secret,
+        address: state.user.address
+    });
+
+    port.onMessage.addListener(function(msg) {
+        if (msg.result === "successGetMyKeys") {
+            state.key.keyBalance = msg.keyBalance;
+            state.key.holderNum = msg.holderNum;
+            state.key.priceInETH = msg.priceInETH;
+            state.key.totalPrice = msg.totalPrice;
+
+            state.keys = msg.myKeys;
+
+            chrome.storage.local.set({ state });
+
+            updateKeysPage();
+        }
+    });
+}
+
+function updateKeysPage() {
+    console.log("updateKeysPage");
+
+    let keys = [];
+    let last = state.keys.length > (state.keysPageInfo.pageSize + state.keysPageInfo.currentRange) ? state.keysPageInfo.pageSize : state.keys.length - state.keysPageInfo.currentRange;
+    for (let i = 0; i < last; i++) {
+        keys.push({
+            // @ts-ignore
+            ...state.keys[state.keysPageInfo.currentRange + i]
+        });
+    }
+    let data = { ...state.key, keys };
+    data.avatar = state.user.avatar;
+    const item = getKeys(data);
+
+    // @ts-ignore
+    document.getElementById("content-2").innerHTML = item;
+
+    currentSelectedKeyIdx = null;
+
+    let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
+    for (let i = 0; i < toolSets.length; i++) {
+        if (state.keys[i]["xend"]) {
+            toolSets[i].dataset.mode = "xend";
+        } else {
+            toolSets[i].dataset.mode = "friendtech";
+        }
+    }
+    // @ts-ignore
+    document.querySelectorAll(".xend-ext-dashboard-keys-xend").forEach((el: any, idx: any) => {
+        el.addEventListener("click", async (e: any) => {
+            if (!state.keys[idx]["xend"]) {
+                showDashboardModal("Alert", "This user doesn't have Xend Platform.");
+                return;
+            }
+
+            const provider = await getProvider();
+            switchChainEth(provider);
+
+            let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
+            toolSets[idx].dataset.mode = "xend";
+        });
+    });
+    // @ts-ignore
+    document.querySelectorAll(".xend-ext-dashboard-keys-friendtech").forEach((el: any, idx: any) => {
+        el.addEventListener("click", async (e: any) => {
+            if (!state.keys[idx]["friendtech"]) {
+                showDashboardModal("Alert", "This user doesn't have account in Friend Tech Platform.");
+                return;
+            }
+
+            const provider = await getProvider();
+            switchChainBase(provider);
+
+            port = chrome.runtime.connect({name: "authorize"});
+            port.postMessage({
+                task: "getMyFriendTechInfo",
+                name: state.user.name
+            });
+            port.onMessage.addListener(function(msg: any) {
+                if (msg.result === "successGetMyFriendTechInfo") {
+                    if (!msg.address) {
+                        showDashboardModal("Alert", "You don't have account in Friend Tech Platform.");
+                        return;
+                    }
+
+                    state.user.friendtechAddress = msg.address;
+
+                    chrome.storage.local.set({ state });
+
+                    let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
+                    toolSets[idx].dataset.mode = "friendtech";
+                }
+            });
+        });
+    });
+    // @ts-ignore
+    document.querySelectorAll(".xend-ext-dashboard-keys-input").forEach((el: any, idx: any) => {
+        el.addEventListener("change", async (e: any) => {
+            let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
+            let mode: any = toolSets[idx].dataset.mode;
+            let prices: any = document.querySelectorAll(".xend-ext-dashboard-keys-price");
+            let amt = Number(e.target.value);
+            // @ts-ignore
+            prices[idx].innerHTML = (amt * Number(state.keys[idx][mode].price)).toFixed(5);
+        });
+    });
+    // @ts-ignore
+    document.querySelectorAll(".xend-ext-dashboard-keys-buy").forEach((el: any, idx: any) => {
+        el.addEventListener("click", async (e: any) => {
+            if (isPendingKeysBuy && isPendingKeysSell) {
+                return;
+            }
+
+            console.log("xend-ext-dashboard-keys-buy");
+
+            isPendingKeysBuy = true;
+
+            // @ts-ignore
+            el.classList.add("spinner-button-loading");
+            // @ts-ignore
+            el.disabled = true;
+
+            let amounts: any = document.querySelectorAll(".xend-ext-dashboard-keys-input");
+            let amt = Number(amounts[idx].value);
+            if (amt == null || amt == 0) {
+                // @ts-ignore
+                el.disabled = false;
+                // @ts-ignore
+                el.classList.remove("spinner-button-loading");
+                isPendingKeysBuy = false;
+                
+                showDashboardModal("Alert", "Please input positive value.");
+                return;
+            }
+
+            let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
+            let mode: any = toolSets[idx].dataset.mode;
+
+            console.log("Keys Buy: ", mode, state.keys[idx], idx);
+            // @ts-ignore
+            let addr = state.keys[idx][mode].address;
+
+            if (mode == "xend") {
+                buyXendKey(el, addr, amt, refreshKeysPage, showDashboardModal, setIsPendingKeysBuy);
+            } else {
+                buyFriendTechKey(el, addr, amt, refreshKeysPage, showDashboardModal, setIsPendingKeysBuy);
+            }
+        });
+    });
+    // @ts-ignore
+    document.querySelectorAll(".xend-ext-dashboard-keys-sell").forEach((el: any, idx: any) => {
+        el.addEventListener("click", async (e: any) => {
+            if (isPendingKeysBuy && isPendingKeysSell) {
+                return;
+            }
+
+            console.log("xend-ext-dashboard-keys-sell");
+
+            isPendingKeysSell = true;
+
+            // @ts-ignore
+            el.disabled = true;
+            // @ts-ignore
+            el.classList.add("spinner-button-loading");
+
+            let amounts: any = document.querySelectorAll(".xend-ext-dashboard-keys-input");
+            let amt = Number(amounts[idx].value);
+            if (amt == null || amt == 0) {
+                // @ts-ignore
+                el.disabled = false;
+                // @ts-ignore
+                el.classList.remove("spinner-button-loading");
+                isPendingKeysSell = false;
+                showDashboardModal("Alert", "Please input positive value.");
+                return;
+            }
+
+            let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
+            let mode: any = toolSets[idx].dataset.mode;
+            // @ts-ignore
+            let addr = state.keys[idx][mode].address;
+
+            if (mode == "xend") {
+                sellXendKey(el, addr, amt, refreshKeysPage, showDashboardModal, setIsPendingKeysSell);
+            } else {
+                sellFriendTechKey(el, addr, amt, refreshKeysPage, showDashboardModal, setIsPendingKeysSell);
+            }
+        });
+    });
+    // @ts-ignore
+    document.querySelectorAll(".xend-ext-dashboard-keys-row").forEach((el: any, idx: any) => {
+        el.addEventListener("click", async (e: any) => {
+            let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
+            let arrows: any = document.querySelectorAll(".xend-ext-keys-direction");
+            // @ts-ignore
+            if (idx != currentSelectedKeyIdx) {
+                if (currentSelectedKeyIdx != null) {
+                    toolSets[currentSelectedKeyIdx].style.display = "none";
+                }
+                toolSets[idx].style.display = "flex";
+                currentSelectedKeyIdx = idx;
+                arrows[idx].classList.remove("xend-ext-keys-arrow-down");
+                arrows[idx].classList.add("xend-ext-keys-arrow-up");
+            } else {
+                currentSelectedKeyIdx = null;
+                toolSets[idx].style.display = "none";
+                arrows[idx].classList.remove("xend-ext-keys-arrow-up");
+                arrows[idx].classList.add("xend-ext-keys-arrow-down");
+            }
+        })
+    });
+    // @ts-ignore
+    document.getElementById("xend-ext-dashboard-row-container").addEventListener("scroll", e => {
+        if (!state.loadingArticles && document.querySelector("#xend-ext-keys-loader")
+            // @ts-ignore
+            && (document.querySelector("#xend-ext-keys-loader").offsetTop <
+                // @ts-ignore
+                document.querySelector("#xend-ext-keys-loader").parentNode.offsetHeight
+                // @ts-ignore
+                + document.querySelector("#xend-ext-keys-loader").parentNode.scrollTop)
+        ) {
+            state.loadingArticles = true;
+            // @ts-ignore
+            const scrollTop = document.querySelector("#xend-ext-dashboard-row-container").scrollTop;
+            const numOfKeys = document.querySelectorAll("#xend-ext-dashboard-row-container .xend-ext-dashboard-row").length;
+
+            let keys = [];
+
+            for (let i = numOfKeys; i < state.keys.length; i++) {
+                // @ts-ignore
+                keys.push({ ...state.keys[i] });
+                if (keys.length == state.keysPageInfo.pageSize) {
+                    break;
+                }
+            }
+
+            const content = getKeyArray({ keys });
+
+            // @ts-ignore
+            document.getElementById("xend-ext-dashboard-row-container").innerHTML += content; 
+            // @ts-ignore
+            document.getElementById("xend-ext-dashboard-row-container").scrollTop = scrollTop;
+
+            state.loadingArticles = false;
+        }
+    });
 }
 
 function createLogin(node: any) {
@@ -1832,6 +2415,7 @@ function createDashboard(node: any) {
     const darkModeStyle = compStyles.backgroundColor == 'rgb(255, 255, 255)' ? false : true;
 
     node.style.height = '410px';
+    node.style.position = "relative";
     if (!state.authorized || !state.walletConnected || !state.signedUp) {
         node.style.display = 'none';
     }
@@ -1856,55 +2440,65 @@ function createDashboard(node: any) {
     }
 
     const pageTpl = `
-    <div class="xend-ext-dashboard-header">
-        <div>Dashboard</div>
-        <div class="xend-ext-dashboard-setting">
-            <div id="xend-ext-dashboard-warning" class="tooltip">
-                <span id="xend-ext-dashboard-warningmsg" class="tooltiptext">
-                    Wrong wallet connected on Metamask
-                </span>
+        <div class="xend-ext-dashboard-header">
+            <div>Dashboard</div>
+            <div class="xend-ext-dashboard-setting">
+                <div id="xend-ext-dashboard-warning" class="tooltip">
+                    <span id="xend-ext-dashboard-warningmsg" class="tooltiptext">
+                        Wrong wallet connected on Metamask
+                    </span>
+                </div>
+                <button id="xend-ext-dashboard-settings-btn" title="Settings"><img id="xend-ext-dashboard-setting-avatar" src="${state.user.avatar}" alt="" draggable="false" /></button>
             </div>
-            <button id="xend-ext-dashboard-settings-btn" title="Settings"><img id="xend-ext-dashboard-setting-avatar" src="${state.user.avatar}" alt="" draggable="false" /></button>
         </div>
-    </div>
-    
-<div class="tabs">
-  <div id="content-1" class="selected">
-    <div id="xend-ext-dashboard-profile-feeds">
-        ` + getFeed(state.feed) + `
-        <div id="xend-ext-feed-loader">&nbsp;</div>
-    </div>
-  </div>
+        
+        <div class="tabs">
+            <div id="content-1" class="selected">
+                <div id="xend-ext-dashboard-profile-feeds">
+                    ` + getFeed(state.feed) + `
+                    <div id="xend-ext-feed-loader">&nbsp;</div>
+                </div>
+            </div>
 
-  <div id="content-2">
-  ` + getKeys(container, { ...state.key, keys: state.keys }) + ` 
-  </div>
-
-
-  <div id="content-3">
-    <div class="xend-ext-dashboard-profile">
-        <textarea id="xendExtPostContent">So nice i had to post it twice</textarea>
-        <div class="xend-ext-dashboard-profile-file" title="Upload file"><label title="Add Image"><input id="addFile" type="file" /></label><button title="Remove Image" id="removeFile">&times;</button></div>
-        <button id="xend-ext-dashboard-profile-post">
-            Post
-        </button>
-        <div style="clear: both"></div>
-    </div>
-    <div id="xend-ext-dashboard-profile-articles"> ` + getArticles(container, state.user.articles) + `</div>
-  </div>
-  
-  <div id="content-4">
-  <iframe src="https://www.friend.tech/"></iframe>
-  </div>
-  
-  <div class="tabs__links">
-    <a href="#content-1">Feed</a>
-    <a href="#content-2">Keys</a>
-    <a href="#content-3">Profile</a>
-    <a href="#content-4">FT</a>
-   
-  </div>
-</div>    
+            <div id="content-2">
+            ` + getKeys({ ...state.key, keys: state.keys }) + ` 
+            </div>
+            
+            <div id="content-3">
+                <div class="xend-ext-dashboard-profile">
+                    <textarea id="xendExtPostContent">So nice i had to post it twice</textarea>
+                    <div class="xend-ext-dashboard-profile-file" title="Upload file"><label title="Add Image"><input id="addFile" type="file" /></label><button title="Remove Image" id="removeFile">&times;</button></div>
+                    <button id="xend-ext-dashboard-profile-post">
+                        Post
+                    </button>
+                    <div style="clear: both"></div>
+                </div>
+                <div id="xend-ext-dashboard-profile-articles"> ` + getArticles(container, state.user.articles) + `</div>
+            </div>
+            
+            <div id="content-4">
+                <iframe src="https://www.friend.tech/"></iframe>
+            </div>
+            
+            <div class="tabs__links">
+                <a href="#content-1">Feed</a>
+                <a href="#content-2">Keys</a>
+                <a href="#content-3">Profile</a>
+                <a href="#content-4">FT</a>
+            </div>
+        </div>    
+        <div id="dashboardModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-icon"></div>
+                    <p id="dashboardModalHeaderTxt" class="modal-header-text">Wrong wallet</p>
+                </div>
+                <p id="dashboardModalMainTxt" class="modal-main-text">
+                    Connect your paired XEND wallet, 0x1041...3234 to continue.
+                </p>
+                <button id="dashboardModalCloseBtn" class="modal-close-button">Close</button>
+            </div>
+        </div>
     `;
     container.innerHTML = pageTpl;
 
@@ -1912,6 +2506,13 @@ function createDashboard(node: any) {
     aside.replaceChildren(aside.children[0]);
     aside.getElementsByTagName('div')[0].appendChild(container);
 
+    // @ts-ignore
+    container.querySelector("#dashboardModal").style.display = "none";
+    // @ts-ignore
+    container.querySelector("#dashboardModalCloseBtn").addEventListener("click", (e) => {
+        // @ts-ignore
+        container.querySelector("#dashboardModal").style.display = "none";
+    });
     // @ts-ignore
     container.querySelector("#xend-ext-dashboard-warning").style.visibility = "hidden";
     // @ts-ignore
@@ -1924,29 +2525,7 @@ function createDashboard(node: any) {
     container.querySelector('a[href="#content-2"]').addEventListener("click", (e) => {
         e.preventDefault();
 
-        port = chrome.runtime.connect({name: "authorize"});
-        port.postMessage({
-            task: "getMyKeys",
-            uid: state.user.uid,
-            token: state.token,
-            secret: state.secret,
-            address: state.user.address
-        });
-
-        port.onMessage.addListener(function(msg) {
-            if (msg.result === "successGetMyKeys") {
-                state.key.keyBalance = msg.keyBalance;
-                state.key.holderNum = msg.holderNum;
-                state.key.priceInETH = msg.priceInETH;
-                state.key.totalPrice = msg.totalPrice;
-
-                state.keys = msg.myKeys;
-
-                chrome.storage.local.set({ state });
-
-                updateKeysPage();
-            }
-        });
+        refreshKeysPage();
 
         // @ts-ignore
         container.querySelector('#content-2').classList.add("selected");
@@ -2003,110 +2582,19 @@ function createDashboard(node: any) {
         }
     });
 
-    const updateKeysPage = () => {
-        let keys = [];
-        let last = state.keys.length > (state.keysPageInfo.pageSize + state.keysPageInfo.currentRange) ? state.keysPageInfo.pageSize : state.keys.length - state.keysPageInfo.currentRange;
-        for (let i = 0; i < last; i++) {
-            keys.push({
-                // @ts-ignore
-                ...state.keys[state.keysPageInfo.currentRange + i]
-            });
-        }
-        let data = { ...state.key, keys };
-        data.avatar = state.user.avatar;
-        const item = getKeys(container, data);
-
-        // @ts-ignore
-        document.getElementById("content-2").innerHTML = item;
-
-        currentSelectedKeyIdx = null;
-        // @ts-ignore
-        document.querySelectorAll(".xend-ext-dashboard-keys-xend").forEach((el: any, idx: any) => {
-            el.addEventListener("click", async (e: any) => {
-                
-            });
-        });
-        // @ts-ignore
-        document.querySelectorAll(".xend-ext-dashboard-keys-friendtech").forEach((el: any, idx: any) => {
-            el.addEventListener("click", async (e: any) => {
-
-            });
-        });
-        // @ts-ignore
-        document.querySelectorAll(".xend-ext-dashboard-keys-buy").forEach((el: any, idx: any) => {
-            el.addEventListener("change", async (e: any) => {
-
-            });
-        });
-        // @ts-ignore
-        document.querySelectorAll(".xend-ext-dashboard-keys-sell").forEach((el: any, idx: any) => {
-            el.addEventListener("click", async (e: any) => {
-
-            });
-        });
-        // @ts-ignore
-        document.querySelectorAll(".xend-ext-dashboard-keys-row").forEach((el: any, idx: any) => {
-            el.addEventListener("click", async (e: any) => {
-                let toolSets: any = document.querySelectorAll(".xend-ext-dashboard-keys-toolset");
-                let arrows: any = document.querySelectorAll(".xend-ext-keys-direction");
-                // @ts-ignore
-                if (idx != currentSelectedKeyIdx) {
-                    if (currentSelectedKeyIdx != null) {
-                        toolSets[currentSelectedKeyIdx].style.display = "none";
-                    }
-                    toolSets[idx].style.display = "flex";
-                    currentSelectedKeyIdx = idx;
-                    arrows[idx].classList.remove("xend-ext-keys-arrow-down");
-                    arrows[idx].classList.add("xend-ext-keys-arrow-up");
-                } else {
-                    toolSets[idx].style.display = "none";
-                    arrows[idx].classList.remove("xend-ext-keys-arrow-up");
-                    arrows[idx].classList.add("xend-ext-keys-arrow-down");
-                }
-            })
-        });
-        // @ts-ignore
-        document.getElementById("xend-ext-dashboard-row-container").addEventListener("scroll", e => {
-            if (!state.loadingArticles && document.querySelector("#xend-ext-keys-loader")
-                // @ts-ignore
-                && (document.querySelector("#xend-ext-keys-loader").offsetTop <
-                    // @ts-ignore
-                    document.querySelector("#xend-ext-keys-loader").parentNode.offsetHeight
-                    // @ts-ignore
-                    + document.querySelector("#xend-ext-keys-loader").parentNode.scrollTop)
-            ) {
-                state.loadingArticles = true;
-                // @ts-ignore
-                const scrollTop = document.querySelector("#xend-ext-dashboard-row-container").scrollTop;
-                const numOfKeys = document.querySelectorAll("#xend-ext-dashboard-row-container .xend-ext-dashboard-row").length;
-
-                let keys = [];
-
-                for (let i = numOfKeys; i < state.keys.length; i++) {
-                    // @ts-ignore
-                    keys.push({ ...state.keys[i] });
-                    if (keys.length == state.keysPageInfo.pageSize) {
-                        break;
-                    }
-                }
-
-                const content = getKeyArray({ keys });
-
-                // @ts-ignore
-                document.getElementById("xend-ext-dashboard-row-container").innerHTML += content; 
-                // @ts-ignore
-                document.getElementById("xend-ext-dashboard-row-container").scrollTop = scrollTop;
-
-                state.loadingArticles = false;
-            }
-        });
-    }
-
     const updateSettingsPage = async () => {
         try {
             const prov = await getProvider();
             const provider = new ethers.providers.Web3Provider(prov);
     
+            const [accounts, chainId] = await getAccounts(prov);
+
+            if (chainId != chain) {
+                showSettingModal("Alert", "Please switch to Ethereum Mainnet");
+                switchChainEth(prov);
+                return;
+            }
+
             signer = provider.getSigner();
             subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
     
@@ -2540,8 +3028,29 @@ function createProfileMenu(node: any) {
         container.querySelector("#buySellModal").style.display = "none";
     })
     // @ts-ignore
-    container.querySelector("#xend-ext-menu-friendtech").addEventListener("click", (e) => {
-        updateBuySellPageFriendTech();
+    container.querySelector("#xend-ext-menu-friendtech").addEventListener("click", async (e) => {
+        port = chrome.runtime.connect({name: "authorize"});
+        port.postMessage({
+            task: "getMyFriendTechInfo",
+            name: state.user.name
+        });
+        port.onMessage.addListener(async function(msg: any) {
+            if (msg.result === "successGetMyFriendTechInfo") {
+                if (!msg.address) {
+                    showBuySellModal("Alert", "You don't have account in Friend Tech Platform.");
+                    return;
+                }
+
+                let provider = await getProvider();
+                switchChainBase(provider);
+
+                state.user.friendtechAddress = msg.address;
+
+                chrome.storage.local.set({ state });
+
+                updateBuySellPageFriendTech();
+            }
+        });
     });
 
     // @ts-ignore
@@ -2564,6 +3073,7 @@ function createProfileMenu(node: any) {
         port.onMessage.addListener(async function(msg: any) {
             if (msg.result === "successGetKeyInfo") {
                 if (msg.data.result == "error") {
+                    console.log("successGetKeyInfo Error");
                     // @ts-ignore
                     document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
                 } else {
@@ -2582,6 +3092,9 @@ function createProfileMenu(node: any) {
                     isPendingSell = false;
 
                     chrome.storage.local.set({ state });
+
+                    let provider = await getProvider();
+                    switchChainEth(provider);
 
                     updateBuySellPageXend();
                 }
@@ -2752,7 +3265,7 @@ function createSettings(node: any) {
             document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
             // @ts-ignore
             document.getElementById("xendExtSubscriptionUpdate").disabled = false;
-            showSettingModal("Alert", "Please input positive value less than 100ETH.");
+            showSettingModal("Alert", "Please input positive value less than 100.");
             return;
         }
         let priceInETH = price;
@@ -2760,11 +3273,39 @@ function createSettings(node: any) {
         price = Web3.utils.toWei(price.toString(), "ether");
         console.log(price);
 
-        const prov = await getProvider();
-        const provider = new ethers.providers.Web3Provider(prov);
+        const provider = await getProvider();
+        const prov = new ethers.providers.Web3Provider(provider);
+    
+        const [accounts, chainId] = await getAccounts(provider);
+        const account = getNormalizeAddress(accounts);
+    
+        if (account.toLowerCase() != state.user.address.toLowerCase()) {
+            // @ts-ignore
+            document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+            // @ts-ignore
+            document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+            setIsPendingUpdatePrice(false);
+            showWarningMessage("Wrong wallet connected on Metamask");
+            showSettingModal("Wrong Wallet.", `Connect your paired Xend wallet, ${getShortHash(state.user.address)} to continue.`);
+            return;
+        }
+    
+        if (chainId != chain) {
+            // @ts-ignore
+            document.getElementById("xendExtSubscriptionUpdate").disabled = false;
+            // @ts-ignore
+            document.getElementById("xendExtSubscriptionUpdate").classList.remove("spinner-button-loading");
+            setIsPendingUpdatePrice(false);
+            showWarningMessage("Wrong chain selected on Metamask");
+            showSettingModal("Alert.", "Please switch chain to Ethereum Mainnet.");
+            return;
+        }
+    
+        hideWarningMessage();
+    
+        let signer = prov.getSigner();
 
-        signer = provider.getSigner();
-        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, provider);
+        subscribeContract = new ethers.Contract(subscribeAddress, subscribeABI, prov);
         
         // @ts-ignore
         const isChecked = document.getElementById("xendExtSubscriptionCheckbox").checked;
@@ -2846,6 +3387,8 @@ function createSettings(node: any) {
 }
 
 async function checkURL(isStart: boolean) {
+    console.log("checkURL", isStart);
+
     if (isStart) {
         // @ts-ignore
         document.querySelector('aside[xend="settings"]').parentNode.parentNode.style.display = "none";
@@ -2871,8 +3414,8 @@ async function checkURL(isStart: boolean) {
 
     port.onMessage.addListener(async function(msg: any) {
         if (msg.result === "successGetKeyInfo") {
-            console.log("successGetKeyInfo", msg.data);
-            if (!msg.data.error) {
+            console.log("successGetKeyInfo Load: ", msg.data);
+            if (msg.data.result != "error") {
                 state.profile.holderNum = msg.data.data.holderNum;
                 state.profile.keyBalance = msg.data.data.keyBalance;
                 state.profile.priceInETH = msg.data.data.priceInETH;
@@ -2891,6 +3434,11 @@ async function checkURL(isStart: boolean) {
                 if (state.walletConnected && state.authorized && state.signedUp) {
                     // @ts-ignore
                     document.querySelector('aside[xend="profile"]').parentNode.parentNode.style.display = "";
+                    // @ts-ignore
+                    document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
+                }
+            } else {
+                if (state.walletConnected && state.authorized && state.signedUp) {
                     // @ts-ignore
                     document.querySelector('aside[xend="dashboard"]').parentNode.parentNode.style.display = "";
                 }
@@ -2946,26 +3494,26 @@ const onMutation = async (mutations: MutationRecord[]) => {
 
                     await checkURL(true);
 
-                    walletProvider = await getProvider();
-                    // @ts-ignore
-                    walletProvider.on('accountsChanged', async function (accounts) {
-                        // Time to reload your interface with accounts[0]!
-                        if (accounts[0] == null) {
-                            logout();
-                        }
-                    })
-                    // @ts-ignore
-                    walletProvider.on('connect', async function (connectInfo) {
-                        // Time to reload your interface with the new networkId
-                        let chainId = parseInt(connectInfo.chainId, 16);
-                        console.log(chainId);
-                        if (chainId != chain) {
-                            let res = await switchChain(walletProvider);
-                            if (!res) {
-                                logout();
-                            }
-                        }
-                    })
+                    // walletProvider = await getProvider();
+                    // // @ts-ignore
+                    // walletProvider.on('accountsChanged', async function (accounts) {
+                    //     // Time to reload your interface with accounts[0]!
+                    //     if (accounts[0] == null) {
+                    //         logout();
+                    //     }
+                    // })
+                    // // @ts-ignore
+                    // walletProvider.on('connect', async function (connectInfo) {
+                    //     // Time to reload your interface with the new networkId
+                    //     let chainId = parseInt(connectInfo.chainId, 16);
+                    //     console.log(chainId);
+                    //     if (chainId != chain) {
+                    //         let res = await switchChainEth(walletProvider);
+                    //         if (!res) {
+                    //             logout();
+                    //         }
+                    //     }
+                    // })
                 });
             });
         }
