@@ -262,6 +262,22 @@ img.xend-ext-dashboard-news-logo {
     border-radius: 16px;
     vertical-align: middle;
 }
+.xend-ext-dashboard-keys-row {
+    margin-top: 10px;
+    width: 100%;
+    position: relative;
+    cursor: pointer;
+}
+.xend-ext-dashboard-keys-row:hover .xend-ext-keys-direction {
+    background: var(--xendlinkcolor) !important;
+}
+.xend-ext-dashboard-keys-trade {
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 5px;
+    align-items: center;
+    justify-content: space-between;
+}
 .xend-ext-dashboard-news-user,
 .xend-ext-dashboard-news-user a,
 .xend-ext-dashboard-keys-user,
@@ -342,12 +358,18 @@ img.xend-ext-dashboard-avatar {
     background-size: 11px;
     font-size: 10px;
 }
-.xend-ext-keys-value>div:first-child {
+.xend-ext-keys-keyset {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.xend-ext-keys-xend-key, .xend-ext-keys-friendtech-key {
     position: relative;
     display: inline-block;
     padding-left: 15px;
+    margin-left: 4px;
 }
-.xend-ext-keys-value>div:first-child:before {
+.xend-ext-keys-xend-key:before {
     content: '';
     position: absolute;
     left: 0;
@@ -355,9 +377,38 @@ img.xend-ext-dashboard-avatar {
     display: inline-block;
     width: 1em;
     height: 1em;
-    background: var(--xendmaincolor);
+    background: #BE4AF0;
     -webkit-mask: url(/static/img/key-blue.png) center no-repeat;
     -webkit-mask-size: 6px;
+}
+.xend-ext-keys-arrow-up {
+    -webkit-mask: url(/static/img/ArrowUp.png) center no-repeat;
+    -webkit-mask-size: 16px;
+}
+.xend-ext-dashboard-keys-toolset {
+    display: none;
+}
+.xend-ext-keys-direction {
+    width: 1em;
+    height: 1em;
+    background: var(--xendsecondcolor);
+    margin-left: 4px;
+}
+.xend-ext-keys-arrow-down {
+    -webkit-mask: url(/static/img/ArrowDown.png) center no-repeat;
+    -webkit-mask-size: 16px;
+}
+.xend-ext-keys-friendtech-key:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1px;
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    background: #00B0F1;
+    -webkit-mask: url(/static/img/friendtech-btn.png) center no-repeat;
+    -webkit-mask-size: 12px;
 }
 
 .xend-ext-keys-value>div~div {
@@ -436,6 +487,16 @@ img.xend-ext-dashboard-avatar {
     font-weight: bold;
     float: right;
     cursor: pointer;
+}
+.xend-ext-dashboard-keys-switch {
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    align-items: center;
+    position: relative;
+    margin-bottom: 5px;
+    width: 120px;
+    height: 40px;
 }
 .xend-ext-profile-del {
     padding-left: 2px;
@@ -537,7 +598,7 @@ div#xend-ext-menu-value div {
 }
 .xend-ext-menu-key {
     position: relative;
-    width: 194px;
+    width: 100%;
     background-color: #003f55;
     border-radius: 14px;
     padding: 4px;
@@ -548,7 +609,6 @@ div#xend-ext-menu-value div {
     margin-bottom: 20px;
     display: flex;
 }
-
 .spinner-button {
     position: relative;
     cursor: pointer;
@@ -590,6 +650,53 @@ div#xend-ext-menu-value div {
         transform: rotate(1turn);
     }
 }
+.xend-ext-dashboard-key {
+    position: relative;
+    width: 194px;
+    background-color: #003f55;
+    border-radius: 14px;
+    padding: 4px;
+    vertical-align: middle;
+    box-sizing: border-box;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    display: flex;
+}
+.xend-ext-dashboard-switch-platform {
+    width: 50px;
+    height: 40px;
+    background-color: #393939;
+    border-radius: 10px;
+    border: solid 1px;
+    margin-right: 10px;
+}
+.xend-ext-dashboard-keys-xend:hover {
+    border: solid 2px;
+    border-color: #BE4AF0;
+}
+.xend-ext-dashboard-keys-friendtech:hover {
+    border: solid 2px;
+    border-color: #00B0F1;
+}
+.xend-ext-dashboard-keys-xend {
+    position: absolute;
+    background: url(/static/img/xend-btn.png) 0px 1px no-repeat;
+    background-size: 30px;
+    background-position: center;
+    right: 60px;
+    top: 0px;
+}
+.xend-ext-dashboard-keys-friendtech {
+    position: absolute;
+    background: url(/static/img/friendtech-btn.png) 0px 1px no-repeat;
+    background-size: 30px;
+    background-position: center;
+    right: 0px;
+    top: 0px;
+}
+.xend-ext-dashboard-keys-sell,
+.xend-ext-dashboard-keys-buy,
 .xend-ext-menu-key-value,
 #xend-ext-menu-key-buy,
 #xend-ext-menu-key-sell {
@@ -615,6 +722,8 @@ div#xend-ext-menu-value div {
     font-weight: inherit;
     margin-bottom: -6px;
 }
+.xend-ext-dashboard-keys-buy,
+.xend-ext-dashboard-keys-sell,
 #xend-ext-menu-key-buy,
 #xend-ext-menu-key-sell {
     color: var(--xendbuttonwhite);
@@ -626,6 +735,7 @@ div#xend-ext-menu-value div {
     border-radius: 11px;
     cursor: pointer;
 }
+.xend-ext-dashboard-keys-sell,
 #xend-ext-menu-key-sell {
     background: #006071;
 }
@@ -1334,9 +1444,10 @@ a[href="#content-4"]:before {
     position: relative;
 }
 #xend-ext-dashboard-row-container {
-    max-height: 220px;
+    height: 170px;
     overflow-y: auto;
     position: relative;
+    margin-bottom: 10px;
 }
 #xend-ext-dashboard-profile-articles {
     height: 190px;
