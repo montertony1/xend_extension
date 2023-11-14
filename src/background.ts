@@ -408,7 +408,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                     });
                 }
             } catch (error) {
-
+                console.log("getFriendTechInfo", error);
             }
         } else if (msg.task === "getMyFriendTechInfo") {
             try {
@@ -419,7 +419,18 @@ chrome.runtime.onConnect.addListener(function(port) {
                     address: res.address
                 });
             } catch (error) {
-
+                console.log("getMyFriendTechInfo", error);
+            }
+        } else if (msg.task === "getAddrByname") {
+            try {
+                console.log("getAddrByname", msg);
+                let res = await (await fetch(`https://api.xend.tech/backend/user/get_address_by_name?name=${msg.name}&token=${msg.token}&secret=${msg.secret}`)).json();
+                port.postMessage({
+                    result: "successGetAddrByname", 
+                    ...res
+                });
+            } catch (error) {
+                console.log("getAddrByname", error);
             }
         }
     });
